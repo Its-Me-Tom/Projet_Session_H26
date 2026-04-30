@@ -1,0 +1,15 @@
+../App/Src/vehicle_diagnostic.c:61:13:RisingEdge	3
+../App/Src/vehicle_diagnostic.c:66:16:GetMenuItemCount	5
+../App/Src/vehicle_diagnostic.c:79:13:ReturnToRoot	1
+../App/Src/vehicle_diagnostic.c:86:13:ReturnToSensors	1
+../App/Src/vehicle_diagnostic.c:93:13:ReturnToMotorList	1
+../App/Src/vehicle_diagnostic.c:100:13:ReturnToLedList	1
+../App/Src/vehicle_diagnostic.c:108:13:HandleUpButton	5
+../App/Src/vehicle_diagnostic.c:131:13:HandleDownButton	6
+../App/Src/vehicle_diagnostic.c:158:13:HandleLeftButton	6
+../App/Src/vehicle_diagnostic.c:235:13:HandleEnterButton	1
+../App/Src/vehicle_diagnostic.c:279:13:HandleStopButton	1
+../App/Src/vehicle_diagnostic.c:299:6:VehicleDiagnostic_Init	1
+../App/Src/vehicle_diagnostic.c:309:6:VehicleDiagnostic_GetContext	2
+../App/Src/vehicle_diagnostic.c:318:6:VehicleDiagnostic_ProcessCommand	8
+../App/Src/vehicle_diagnostic.c:360:6:VehicleDiagnostic_GetSelectedMotor	2

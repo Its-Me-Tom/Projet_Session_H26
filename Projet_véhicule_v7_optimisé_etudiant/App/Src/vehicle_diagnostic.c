@@ -191,6 +191,44 @@ static void HandleLeftButton(void)
      * DIAG_MENU_LED_RED
      *      -> retour à la liste des DEL
      */
+
+	if (g_diag.menu == DIAG_MENU_DISPLAY)
+	{
+        g_diag.display_mode = DIAG_DISPLAY_MENU;
+    }
+
+    switch (g_diag.menu)
+    {
+        case DIAG_MENU_SENSORS:
+        case DIAG_MENU_COMM:
+        case DIAG_MENU_MOTOR_LIST:
+        case DIAG_MENU_LED_LIST:
+        case DIAG_MENU_DISPLAY:
+            ReturnToRoot();
+            break;
+
+        case DIAG_MENU_SENSOR_LINE:
+        case DIAG_MENU_SENSOR_PROX:
+            ReturnToSensors();
+            break;
+
+        case DIAG_MENU_MOTOR_AVG:
+        case DIAG_MENU_MOTOR_AVD:
+        case DIAG_MENU_MOTOR_ARG:
+        case DIAG_MENU_MOTOR_ARD:
+            ReturnToMotorList();
+            break;
+
+        case DIAG_MENU_LED_GREEN:
+        case DIAG_MENU_LED_ORANGE:
+        case DIAG_MENU_LED_BLUE:
+        case DIAG_MENU_LED_RED:
+            ReturnToLedList();
+            break;
+
+        default:
+            break;
+	    }
 }
 
 
