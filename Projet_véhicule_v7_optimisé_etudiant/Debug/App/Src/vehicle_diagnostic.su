@@ -1,0 +1,15 @@
+../App/Src/vehicle_diagnostic.c:61:13:RisingEdge	16	static
+../App/Src/vehicle_diagnostic.c:66:16:GetMenuItemCount	16	static
+../App/Src/vehicle_diagnostic.c:79:13:ReturnToRoot	4	static
+../App/Src/vehicle_diagnostic.c:86:13:ReturnToSensors	4	static
+../App/Src/vehicle_diagnostic.c:93:13:ReturnToMotorList	4	static
+../App/Src/vehicle_diagnostic.c:100:13:ReturnToLedList	4	static
+../App/Src/vehicle_diagnostic.c:108:13:HandleUpButton	4	static
+../App/Src/vehicle_diagnostic.c:131:13:HandleDownButton	16	static
+../App/Src/vehicle_diagnostic.c:158:13:HandleLeftButton	4	static
+../App/Src/vehicle_diagnostic.c:197:13:HandleEnterButton	16	static
+../App/Src/vehicle_diagnostic.c:241:13:HandleStopButton	4	static
+../App/Src/vehicle_diagnostic.c:261:6:VehicleDiagnostic_Init	8	static
+../App/Src/vehicle_diagnostic.c:271:6:VehicleDiagnostic_GetContext	24	static
+../App/Src/vehicle_diagnostic.c:280:6:VehicleDiagnostic_ProcessCommand	24	static
+../App/Src/vehicle_diagnostic.c:322:6:VehicleDiagnostic_GetSelectedMotor	16	static

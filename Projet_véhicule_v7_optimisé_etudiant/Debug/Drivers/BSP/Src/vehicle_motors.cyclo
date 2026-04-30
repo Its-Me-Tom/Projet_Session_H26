@@ -1,0 +1,15 @@
+../Drivers/BSP/Src/vehicle_motors.c:77:13:Motor_InitOne	1
+../Drivers/BSP/Src/vehicle_motors.c:106:13:Motor_SetSignedSpeed	7
+../Drivers/BSP/Src/vehicle_motors.c:139:13:LeftSide_SetSignedSpeed	1
+../Drivers/BSP/Src/vehicle_motors.c:148:13:RightSide_SetSignedSpeed	1
+../Drivers/BSP/Src/vehicle_motors.c:162:26:Motor_GetHandle	5
+../Drivers/BSP/Src/vehicle_motors.c:174:13:I2C3_Lock	2
+../Drivers/BSP/Src/vehicle_motors.c:182:13:I2C3_Unlock	2
+../Drivers/BSP/Src/vehicle_motors.c:195:6:VehicleMotors_Init	5
+../Drivers/BSP/Src/vehicle_motors.c:236:6:VehicleMotors_HasError	1
+../Drivers/BSP/Src/vehicle_motors.c:245:6:VehicleMotors_SetLeftRight	1
+../Drivers/BSP/Src/vehicle_motors.c:251:6:VehicleMotors_AllCoast	1
+../Drivers/BSP/Src/vehicle_motors.c:262:6:VehicleMotors_SetOne	5
+../Drivers/BSP/Src/vehicle_motors.c:296:6:VehicleMotors_ReadOneFaultPin	3
+../Drivers/BSP/Src/vehicle_motors.c:310:6:VehicleMotors_ReadOneRipple	4
+../Drivers/BSP/Src/vehicle_motors.c:325:6:VehicleMotors_SetI2C3Mutex	1
