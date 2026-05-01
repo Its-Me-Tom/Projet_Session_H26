@@ -1,7 +1,0 @@
-../App/Src/vehicle_display.c:42:6:VehicleDisplay_WriteLineIfChanged	24	static
-../App/Src/vehicle_display.c:64:6:VehicleDisplay_BuildLines	80	static
-../App/Src/vehicle_display.c:109:13:BuildFailsafeDisplay	24	static
-../App/Src/vehicle_display.c:120:13:BuildIdleDisplay	184	static
-../App/Src/vehicle_display.c:134:13:BuildManualDisplay	24	static
-../App/Src/vehicle_display.c:149:13:BuildLineFollowDisplay	224	static
-../App/Src/vehicle_display.c:175:13:BuildObstacleAvoidDisplay	192	static

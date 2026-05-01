@@ -1,7 +1,0 @@
-../Drivers/BSP/Src/sharp_2y0a21.c:11:26:sharp_adc_select_channel	1
-../Drivers/BSP/Src/sharp_2y0a21.c:22:6:SHARP_2Y0A21_Init	2
-../Drivers/BSP/Src/sharp_2y0a21.c:42:23:SHARP_2Y0A21_ReadRaw	7
-../Drivers/BSP/Src/sharp_2y0a21.c:76:23:SHARP_2Y0A21_ReadRawAverage	6
-../Drivers/BSP/Src/sharp_2y0a21.c:105:10:SHARP_2Y0A21_RawToMilliVolts	3
-../Drivers/BSP/Src/sharp_2y0a21.c:129:23:SHARP_2Y0A21_MilliVoltsToDistanceMm	5
-../Drivers/BSP/Src/sharp_2y0a21.c:154:23:SHARP_2Y0A21_ReadDistanceMm	5

@@ -1,5 +1,0 @@
-../App/Src/vehicle_display_data.c:24:6:VehicleDisplayData_SetBluetoothConnected	16	static
-../App/Src/vehicle_display_data.c:29:6:VehicleDisplayData_SetLastRxFrame	16	static
-../App/Src/vehicle_display_data.c:41:6:VehicleDisplayData_SetLineData	16	static
-../App/Src/vehicle_display_data.c:47:6:VehicleDisplayData_SetProximityData	24	static
-../App/Src/vehicle_display_data.c:59:6:VehicleDisplayData_Get	16	static

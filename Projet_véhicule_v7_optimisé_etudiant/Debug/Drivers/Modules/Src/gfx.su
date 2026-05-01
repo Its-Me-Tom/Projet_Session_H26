@@ -1,8 +1,0 @@
-../Drivers/Modules/Src/gfx.c:16:6:GFX_Init	24	static
-../Drivers/Modules/Src/gfx.c:23:6:GFX_Clear	16	static
-../Drivers/Modules/Src/gfx.c:28:6:GFX_DrawPixel	32	static
-../Drivers/Modules/Src/gfx.c:42:6:GFX_DrawHLine	32	static
-../Drivers/Modules/Src/gfx.c:50:6:GFX_DrawVLine	32	static
-../Drivers/Modules/Src/gfx.c:58:6:GFX_DrawRect	32	static
-../Drivers/Modules/Src/gfx.c:69:6:GFX_DrawChar5x7	40	static
-../Drivers/Modules/Src/gfx.c:90:6:GFX_DrawString5x7	32	static

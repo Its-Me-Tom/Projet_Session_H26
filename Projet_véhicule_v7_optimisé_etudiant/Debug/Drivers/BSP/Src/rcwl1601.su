@@ -1,9 +1,0 @@
-../Drivers/BSP/Src/rcwl1601.c:10:13:RCWL1601_Delay10us	16	static,ignoring_inline_asm
-../Drivers/BSP/Src/rcwl1601.c:18:6:RCWL1601_Init	24	static
-../Drivers/BSP/Src/rcwl1601.c:50:6:RCWL1601_Trigger	16	static
-../Drivers/BSP/Src/rcwl1601.c:76:6:RCWL1601_EXTI_Callback	24	static
-../Drivers/BSP/Src/rcwl1601.c:116:6:RCWL1601_Process	16	static
-../Drivers/BSP/Src/rcwl1601.c:133:9:RCWL1601_IsReady	16	static
-../Drivers/BSP/Src/rcwl1601.c:143:19:RCWL1601_GetEchoTimeUs	16	static
-../Drivers/BSP/Src/rcwl1601.c:167:19:RCWL1601_GetDistanceMm	24	static
-../Drivers/BSP/Src/rcwl1601.c:190:6:RCWL1601_ClearData	16	static

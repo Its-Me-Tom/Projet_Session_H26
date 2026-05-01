@@ -1,4 +1,0 @@
-../Drivers/BSP/Src/usb_vcp_driver.c:18:9:usb_vcp_is_ready	2
-../Drivers/BSP/Src/usb_vcp_driver.c:23:16:tx_free	3
-../Drivers/BSP/Src/usb_vcp_driver.c:38:9:usb_vcp_write_blocking	8
-../Drivers/BSP/Src/usb_vcp_driver.c:73:6:usb_vcp_rx_callback	1

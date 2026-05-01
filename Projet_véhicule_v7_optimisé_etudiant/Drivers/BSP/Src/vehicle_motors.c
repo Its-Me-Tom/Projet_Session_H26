@@ -198,7 +198,7 @@ void VehicleMotors_Init(void)
 
     if (!Motor_InitOne(&hmotor_front_left,
                        &hi2c1,
-                       0x66,
+                       0x60,
                        GPIOE, GPIO_PIN_2,
                        GPIOE, GPIO_PIN_7))
     {
@@ -216,7 +216,7 @@ void VehicleMotors_Init(void)
 
     if (!Motor_InitOne(&hmotor_front_right,
                        &hi2c3,
-                       0x66,
+                       0x70,
                        GPIOE, GPIO_PIN_4,
                        GPIOD, GPIO_PIN_2))
     {
@@ -225,7 +225,7 @@ void VehicleMotors_Init(void)
 
     if (!Motor_InitOne(&hmotor_rear_right,
                        &hi2c3,
-                       0x64,
+                       0x60,
                        GPIOE, GPIO_PIN_4,
                        GPIOD, GPIO_PIN_2))
     {

@@ -1,7 +1,0 @@
-../Drivers/BSP/Src/pcf8574.c:11:17:addr8	1
-../Drivers/BSP/Src/pcf8574.c:16:6:PCF8574_Init	1
-../Drivers/BSP/Src/pcf8574.c:23:19:PCF8574_WriteByte	1
-../Drivers/BSP/Src/pcf8574.c:29:19:PCF8574_ReadByte	1
-../Drivers/BSP/Src/pcf8574.c:34:19:PCF8574_WritePin	3
-../Drivers/BSP/Src/pcf8574.c:44:19:PCF8574_SetPinInput	1
-../Drivers/BSP/Src/pcf8574.c:49:19:PCF8574_SetPinLow	1
