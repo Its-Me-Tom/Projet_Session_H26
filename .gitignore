@@ -1,0 +1,17 @@
+# Build STM32
+Debug/
+Release/
+
+# Build files
+*.o
+*.su
+*.cyclo
+*.map
+*.list
+
+# Launch configs
+*.launch
+
+# OS
+.DS_Store
+Thumbs.db
