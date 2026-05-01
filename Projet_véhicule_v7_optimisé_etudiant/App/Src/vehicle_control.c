@@ -274,21 +274,29 @@ static void BuildManualMotorCommand(motor_cmd_t *mcmd)
      * - si STOP est appuyé, arrêter le véhicule
      */
 
-    mcmd->coast = false;
-    // Use g_vc.last_cmd (control_cmd_t) instead of mcmd
-    mcmd->left_cmd = clamp100(g_vc.last_cmd.speed + g_vc.last_cmd.turn + g_vc.last_cmd.trim);
-    mcmd->right_cmd = clamp100(g_vc.last_cmd.speed - g_vc.last_cmd.turn - g_vc.last_cmd.trim);
 
-    if (g_vc.last_cmd.speed == 0 && g_vc.last_cmd.turn == 0)
+    MotorCommand_Clear(mcmd);
+
+    if (g_vc.last_cmd.stop)
+    {
+        return;
+    }
+
+    
+    int trim = (g_vc.last_cmd.speed == 0 && g_vc.last_cmd.turn == 0) ? 0 : g_vc.last_cmd.trim;
+    
+    mcmd->left_cmd = clamp100(g_vc.last_cmd.speed + g_vc.last_cmd.turn + trim);
+    mcmd->right_cmd = clamp100(g_vc.last_cmd.speed - g_vc.last_cmd.turn - trim);
+    
+
+    if (mcmd->left_cmd == 0 && mcmd->right_cmd == 0)
     {
         mcmd->coast = true;
     }
-    
-    if (g_vc.last_cmd.stop)
+    else
     {
-        MotorCommand_Clear(mcmd);
+        mcmd->coast = false;
     }
-
 }
 
 /*
