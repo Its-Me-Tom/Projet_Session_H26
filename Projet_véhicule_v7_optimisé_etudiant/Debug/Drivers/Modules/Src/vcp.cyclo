@@ -1,0 +1,2 @@
+../Drivers/Modules/Src/vcp.c:19:9:VCP_IsReady	1
+../Drivers/Modules/Src/vcp.c:24:8:VCP_SendStringBlocking	6
