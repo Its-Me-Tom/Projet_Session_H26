@@ -1,7 +1,7 @@
-../App/Src/vehicle_display.c:42:6:VehicleDisplay_WriteLineIfChanged	2
-../App/Src/vehicle_display.c:64:6:VehicleDisplay_BuildLines	6
-../App/Src/vehicle_display.c:109:13:BuildFailsafeDisplay	1
-../App/Src/vehicle_display.c:120:13:BuildIdleDisplay	2
-../App/Src/vehicle_display.c:134:13:BuildManualDisplay	2
-../App/Src/vehicle_display.c:149:13:BuildLineFollowDisplay	9
-../App/Src/vehicle_display.c:175:13:BuildObstacleAvoidDisplay	2
+..\App\Src\vehicle_display.c:42:6:VehicleDisplay_WriteLineIfChanged	2
+..\App\Src\vehicle_display.c:64:6:VehicleDisplay_BuildLines	6
+..\App\Src\vehicle_display.c:109:13:BuildFailsafeDisplay	1
+..\App\Src\vehicle_display.c:120:13:BuildIdleDisplay	2
+..\App\Src\vehicle_display.c:134:13:BuildManualDisplay	2
+..\App\Src\vehicle_display.c:149:13:BuildLineFollowDisplay	9
+..\App\Src\vehicle_display.c:175:13:BuildObstacleAvoidDisplay	2

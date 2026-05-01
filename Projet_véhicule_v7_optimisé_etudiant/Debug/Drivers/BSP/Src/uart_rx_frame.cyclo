@@ -1,4 +1,4 @@
-../Drivers/BSP/Src/uart_rx_frame.c:22:6:UartFrameRx_Start	1
-../Drivers/BSP/Src/uart_rx_frame.c:27:6:UartFrameRx_Fetch	6
-../Drivers/BSP/Src/uart_rx_frame.c:55:6:UartFrameRx_RxCpltCallback	9
-../Drivers/BSP/Src/uart_rx_frame.c:103:6:UartFrameRx_ErrorCallback	1
+..\Drivers\BSP\Src\uart_rx_frame.c:22:6:UartFrameRx_Start	1
+..\Drivers\BSP\Src\uart_rx_frame.c:27:6:UartFrameRx_Fetch	6
+..\Drivers\BSP\Src\uart_rx_frame.c:55:6:UartFrameRx_RxCpltCallback	9
+..\Drivers\BSP\Src\uart_rx_frame.c:103:6:UartFrameRx_ErrorCallback	1

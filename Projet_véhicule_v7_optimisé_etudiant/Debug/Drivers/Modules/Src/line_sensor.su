@@ -1,3 +1,3 @@
-../Drivers/Modules/Src/line_sensor.c:16:6:LineSensor_Init	16	static
-../Drivers/Modules/Src/line_sensor.c:30:6:LineSensor_SetPower	16	static
-../Drivers/Modules/Src/line_sensor.c:44:9:LineSensor_ReadRaw	16	static
+..\Drivers\Modules\Src\line_sensor.c:16:6:LineSensor_Init	16	static
+..\Drivers\Modules\Src\line_sensor.c:30:6:LineSensor_SetPower	16	static
+..\Drivers\Modules\Src\line_sensor.c:44:9:LineSensor_ReadRaw	16	static
