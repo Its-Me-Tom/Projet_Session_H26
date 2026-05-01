@@ -422,14 +422,18 @@ static void Task_MainController(void *argument)
          * - publier la commande avec PublishMotorCommand(&mcmd)
          * - mettre à jour last_auto_ctrl_tick
          */
-
-        /*
-        if (...)
+////////////////////////////////////////////////////////////////////////
+        if (IsAutoControlState())
         {
-            ...
+            if ((xTaskGetTickCount() - last_auto_ctrl_tick) > pdMS_TO_TICKS(AUTO_CTRL_PERIOD_MS))
+            {
+                VehicleControl_GetMotorCommand(&mcmd);
+                ApplyDiagnosticMotorCommand(&mcmd);
+                PublishMotorCommand(&mcmd);
+                last_auto_ctrl_tick = xTaskGetTickCount();
+            }
         }
-        */
-
+/////////////////////////////////////////////////////////////////////////////
         if ((xTaskGetTickCount() - last_rx_tick) > pdMS_TO_TICKS(BT_TIMEOUT_MS))
         {
             HandleBluetoothTimeout(&last_rx_tick);

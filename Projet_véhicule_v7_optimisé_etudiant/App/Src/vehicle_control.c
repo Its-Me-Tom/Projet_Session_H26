@@ -297,12 +297,15 @@ static void BuildManualMotorCommand(motor_cmd_t *mcmd)
     {
         mcmd->coast = false;
     }
+<<<<<<< HEAD
 
     if (g_vc.state == VEHICLE_STATE_FAILSAFE)
     {
         MotorCommand_Clear(mcmd);
     }
     
+=======
+>>>>>>> 7723f81b105ac757df025f823adacd432f5a246e
 }
 
 /*

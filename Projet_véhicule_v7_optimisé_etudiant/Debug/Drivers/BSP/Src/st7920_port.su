@@ -1,8 +1,0 @@
-..\Drivers\BSP\Src\st7920_port.c:27:6:ST7920_Port_Init	8	static
-..\Drivers\BSP\Src\st7920_port.c:36:6:ST7920_Port_SetRS	16	static
-..\Drivers\BSP\Src\st7920_port.c:42:6:ST7920_Port_SetRW	16	static
-..\Drivers\BSP\Src\st7920_port.c:48:6:ST7920_Port_SetE	16	static
-..\Drivers\BSP\Src\st7920_port.c:54:6:ST7920_Port_SetPSB	16	static
-..\Drivers\BSP\Src\st7920_port.c:60:6:ST7920_Port_WriteBus	24	static
-..\Drivers\BSP\Src\st7920_port.c:68:6:ST7920_Port_DelayShort	16	static,ignoring_inline_asm
-..\Drivers\BSP\Src\st7920_port.c:76:6:ST7920_Port_DelayMs	16	static

@@ -1,8 +1,0 @@
-..\Drivers\Modules\Src\gfx.c:16:6:GFX_Init	1
-..\Drivers\Modules\Src\gfx.c:23:6:GFX_Clear	3
-..\Drivers\Modules\Src\gfx.c:28:6:GFX_DrawPixel	4
-..\Drivers\Modules\Src\gfx.c:42:6:GFX_DrawHLine	2
-..\Drivers\Modules\Src\gfx.c:50:6:GFX_DrawVLine	2
-..\Drivers\Modules\Src\gfx.c:58:6:GFX_DrawRect	3
-..\Drivers\Modules\Src\gfx.c:69:6:GFX_DrawChar5x7	6
-..\Drivers\Modules\Src\gfx.c:90:6:GFX_DrawString5x7	2
