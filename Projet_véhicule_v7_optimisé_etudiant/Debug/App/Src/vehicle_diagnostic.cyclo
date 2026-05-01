@@ -7,9 +7,9 @@
 ../App/Src/vehicle_diagnostic.c:108:13:HandleUpButton	5
 ../App/Src/vehicle_diagnostic.c:131:13:HandleDownButton	6
 ../App/Src/vehicle_diagnostic.c:158:13:HandleLeftButton	6
-../App/Src/vehicle_diagnostic.c:235:13:HandleEnterButton	1
-../App/Src/vehicle_diagnostic.c:279:13:HandleStopButton	1
-../App/Src/vehicle_diagnostic.c:299:6:VehicleDiagnostic_Init	1
-../App/Src/vehicle_diagnostic.c:309:6:VehicleDiagnostic_GetContext	2
-../App/Src/vehicle_diagnostic.c:318:6:VehicleDiagnostic_ProcessCommand	8
-../App/Src/vehicle_diagnostic.c:360:6:VehicleDiagnostic_GetSelectedMotor	2
+../App/Src/vehicle_diagnostic.c:235:13:HandleEnterButton	27
+../App/Src/vehicle_diagnostic.c:363:13:HandleStopButton	1
+../App/Src/vehicle_diagnostic.c:395:6:VehicleDiagnostic_Init	1
+../App/Src/vehicle_diagnostic.c:405:6:VehicleDiagnostic_GetContext	2
+../App/Src/vehicle_diagnostic.c:414:6:VehicleDiagnostic_ProcessCommand	8
+../App/Src/vehicle_diagnostic.c:456:6:VehicleDiagnostic_GetSelectedMotor	6
