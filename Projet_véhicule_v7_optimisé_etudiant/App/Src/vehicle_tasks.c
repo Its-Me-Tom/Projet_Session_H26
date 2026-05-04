@@ -595,7 +595,15 @@ static void Task_LineSensor(void *argument)
          * - libérer le mutex avec xSemaphoreGive()
          */
 
-        raw = 0;
+        if (xSemaphoreTake(g_i2c3_mutex, pdMS_TO_TICKS(10)) == pdTRUE)
+        {
+        	raw = LineSensor_ReadRaw();
+            xSemaphoreGive(g_i2c3_mutex);
+        }
+        else
+        {
+            raw = 0;
+        }
 
         /*
          * TODO 3 :
@@ -608,7 +616,13 @@ static void Task_LineSensor(void *argument)
          * - si la ligne est valide, envoyer l'erreur avec VehicleControl_SetLineError()
          */
 
-        line_state = LINE_STATE_UNKNOWN;
+        line_state = DecodeLineState(raw);
+        VehicleDisplayData_SetLineData(raw, g_line_error);
+        VehicleControl_SetLineState(line_state);
+        if (line_state == LINE_STATE_LEFT || line_state == LINE_STATE_CENTER || line_state == LINE_STATE_RIGHT)
+        {
+            VehicleControl_SetLineError(g_line_error);
+        }
 
         vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(LINE_SENSOR_PERIOD_MS));
     }
@@ -659,6 +673,33 @@ static void Task_ProximitySensors(void *argument)
          * distance = 500 mm, valid = true.
          */
 
+        if (ReadBothSharpRaw(&raw_left, &raw_right))
+        {
+            mv_left = SharpRawToMilliVolts(raw_left);
+            mv_right = SharpRawToMilliVolts(raw_right);
+
+            if (SHARP_2Y0A21_MilliVoltsToDistanceMm(mv_left, &prox.left_mm) != SHARP_2Y0A21_OK)
+            {
+                prox.left_mm = 500;
+            }
+            prox.left_valid = true;
+
+            if (SHARP_2Y0A21_MilliVoltsToDistanceMm(mv_right, &prox.right_mm) != SHARP_2Y0A21_OK)
+            {
+                prox.right_mm = 500;
+            }
+            prox.right_valid = true;
+        }
+        else
+        {
+            prox.left_mm = 500;
+            prox.left_valid = true;
+            prox.right_mm = 500;
+            prox.right_valid = true;
+            mv_left = 0;
+            mv_right = 0;
+        }
+
         /*
          * TODO 5 :
          * Lire le capteur ultrason central.
@@ -675,6 +716,20 @@ static void Task_ProximitySensors(void *argument)
          * distance = 600 mm, valid = true.
          */
 
+        RCWL1601_Trigger(&hrcwl);
+        vTaskDelay(pdMS_TO_TICKS(RCWL_WAIT_MS));
+        RCWL1601_Process(&hrcwl);
+        if (RCWL1601_GetDistanceMm(&hrcwl, &dmm) == RCWL1601_OK)
+        {
+            prox.center_mm = dmm;
+            prox.center_valid = true;
+        }
+        else
+        {
+            prox.center_mm = 600;
+            prox.center_valid = true;
+        }
+
         /*
          * TODO 6 :
          * Publier les données de proximité.
@@ -683,6 +738,9 @@ static void Task_ProximitySensors(void *argument)
          * - VehicleDisplayData_SetProximityData(&prox, mv_left, mv_right)
          * - VehicleControl_SetProximityData(&prox)
          */
+
+        VehicleDisplayData_SetProximityData(&prox, mv_left, mv_right);
+        VehicleControl_SetProximityData(&prox);
 
         vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(PROX_SENSOR_PERIOD_MS));
     }
