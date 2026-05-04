@@ -37,6 +37,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <stdlib.h>
+
 /*============================================================================
  * PRIVATE TYPES
  *===========================================================================*/
@@ -90,8 +92,12 @@ static vehicle_control_ctx_t g_vc = {0};
 #define LF_SPEED_REDUCTION_STEP     1
 #define LF_INTEGRAL_MAX            40
 
+#define LF_CORR_SLEW_MAX 			5
+
 #define LF_SEARCH_LEFT_MOTOR      -30
 #define LF_SEARCH_RIGHT_MOTOR      30
+
+#define SMALL_ERROR_THRESHOLD 5
 
 
 /* ===== OBSTACLE AVOID TUNING ===== */
@@ -458,7 +464,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         /* Appliquer la correction aux moteurs */
         /* Erreur positive = ligne à gauche → tourner à droite */
         /* Erreur négative = ligne à droite → tourner à gauche */
-        int base_speed = LF_SPEED_CENTER - abs(correction) * LF_SPEED_REDUCTION_GAIN;
+        int base_speed = LF_SPEED_CENTER - abs(correction) * LF_SPEED_REDUCTION_STEP;
 
         if (base_speed < LF_SPEED_MIN)
             base_speed = LF_SPEED_MIN;
