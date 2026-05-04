@@ -365,69 +365,91 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
      *    - sinon tourner dans la direction de la dernière ligne vue
      */
 
-    /* CAS 2 : Ligne perdue */
+    /* Vérifier si la ligne est détectée */
     if (g_vc.line_state == LINE_STATE_LOST || g_vc.line_state == LINE_STATE_UNKNOWN)
     {
-        /* Incrémenter le compteur */
+        /* Ligne perdue */
         g_vc.line_lost_ticks++;
 
-        /* Jamais vue → arrêt */
+        /* Si aucune ligne n'a jamais été vue → arrêter */
         if (!g_vc.line_seen_once)
         {
+            g_vc.line_lost_ticks = 0;
             MotorCommand_Clear(mcmd);
             return;
         }
 
-        /* Timeout → arrêt */
+        /* Si timeout dépassé → arrêter */
         if (g_vc.line_lost_ticks > LF_LOST_TIMEOUT_TICKS)
         {
+            g_vc.line_lost_ticks = 0;
             MotorCommand_Clear(mcmd);
             return;
         }
 
-        /* Recherche selon dernière direction */
+        /* Tourner dans la direction de la dernière ligne vue */
         if (g_vc.last_seen_dir == LINE_STATE_LEFT)
         {
-            mcmd->left_cmd  = -LF_SEARCH_SPEED;
-            mcmd->right_cmd =  LF_SEARCH_SPEED;
+            /* Dernière ligne vue à gauche → tourner à gauche */
+            mcmd->left_cmd  = LF_SEARCH_LEFT_MOTOR;
+            mcmd->right_cmd = LF_SEARCH_RIGHT_MOTOR;
+            mcmd->coast = false;
         }
         else if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
         {
-            mcmd->left_cmd  =  LF_SEARCH_SPEED;
-            mcmd->right_cmd = -LF_SEARCH_SPEED;
+            /* Dernière ligne vue à droite → tourner à droite */
+            mcmd->left_cmd  = LF_SEARCH_RIGHT_MOTOR;
+            mcmd->right_cmd = LF_SEARCH_LEFT_MOTOR;
+            mcmd->coast = false;
         }
-        else
+        else if (g_vc.last_seen_dir == LINE_STATE_CENTER)
         {
+            /* Dernière ligne vue au centre -> avancer droit */
             mcmd->left_cmd  = LF_SPEED_CENTER;
             mcmd->right_cmd = LF_SPEED_CENTER;
+            mcmd->coast = false;
         }
-
-        mcmd->coast = false;
     }
     else
     {
-        /* Ligne détectée → reset du compteur */
-        g_vc.line_lost_ticks = 0;
-
-        /* Correction proportionnelle (P uniquement) */
+        /* Ligne détectée → calculer la correction PID */
+        
+        /* Calcul PID : P + I + D */
         int error = g_vc.line_error_filt;
-        int correction = error * LF_KP;
-
+        
+        /* Terme proportionnel */
+        int p_term = error * LF_KP;
+        
+        /* Terme dérivé */
+        int d_term = (error - g_vc.line_error_prev) * LF_KD;
+        g_vc.line_error_prev = error;
+        
+        /* Terme intégral (avec saturation) */
+        g_vc.line_error_integral += error;
+        if (g_vc.line_error_integral > LF_INTEGRAL_MAX)
+            g_vc.line_error_integral = LF_INTEGRAL_MAX;
+        if (g_vc.line_error_integral < -LF_INTEGRAL_MAX)
+            g_vc.line_error_integral = -LF_INTEGRAL_MAX;
+        
+        int i_term = g_vc.line_error_integral * LF_KI;
+        
+        /* Correction totale */
+        int correction = p_term + i_term + d_term;
+        
         /* Limiter la correction */
         if (correction > LF_CORR_MAX) correction = LF_CORR_MAX;
-        else if (correction < -LF_CORR_MAX) correction = -LF_CORR_MAX;
-
-        /* Appliquer aux moteurs */
-        mcmd->left_cmd  = LF_SPEED_CENTER - correction;
+        if (correction < -LF_CORR_MAX) correction = -LF_CORR_MAX;
+        
+        /* Appliquer la correction aux moteurs */
+        /* Erreur positive = ligne à gauche → tourner à droite */
+        /* Erreur négative = ligne à droite → tourner à gauche */
+        mcmd->left_cmd = LF_SPEED_CENTER - correction;
         mcmd->right_cmd = LF_SPEED_CENTER + correction;
-
-        /* Clamp des vitesses */
-        if (mcmd->left_cmd > LF_SPEED_MAX) mcmd->left_cmd = LF_SPEED_MAX;
-        if (mcmd->right_cmd > LF_SPEED_MAX) mcmd->right_cmd = LF_SPEED_MAX;
-
+        
+        /* Limiter la vitesse minimale */
         if (mcmd->left_cmd < LF_SPEED_MIN) mcmd->left_cmd = LF_SPEED_MIN;
         if (mcmd->right_cmd < LF_SPEED_MIN) mcmd->right_cmd = LF_SPEED_MIN;
-
+        
         mcmd->coast = false;
     }
 }
