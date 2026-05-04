@@ -297,15 +297,12 @@ static void BuildManualMotorCommand(motor_cmd_t *mcmd)
     {
         mcmd->coast = false;
     }
-<<<<<<< HEAD
 
     if (g_vc.state == VEHICLE_STATE_FAILSAFE)
     {
         MotorCommand_Clear(mcmd);
     }
     
-=======
->>>>>>> 7723f81b105ac757df025f823adacd432f5a246e
 }
 
 /*
@@ -338,6 +335,18 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
      * - last_seen_dir
      */
 
+    /* Mémoriser la dernière position de la ligne */
+    if (g_vc.line_state == LINE_STATE_LEFT || 
+        g_vc.line_state == LINE_STATE_RIGHT || 
+        g_vc.line_state == LINE_STATE_CENTER)
+    {
+        if (!g_vc.line_seen_once)
+        {
+            g_vc.line_seen_once = true;
+        }
+        g_vc.last_seen_dir = g_vc.line_state;
+    }
+
     /*
      * TODO 3 : Suiveur de ligne
      *
@@ -356,7 +365,94 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
      *    - sinon tourner dans la direction de la dernière ligne vue
      */
 
-    MotorCommand_Clear(mcmd);
+    /* Réinitialiser le compteur de ticks perdus */
+    g_vc.line_lost_ticks = 0;
+
+    /* Vérifier si la ligne est détectée */
+    if (g_vc.line_state == LINE_STATE_LOST || g_vc.line_state == LINE_STATE_UNKNOWN)
+    {
+        /* Ligne perdue */
+        g_vc.line_lost_ticks++;
+
+        /* Si aucune ligne n'a jamais été vue → arrêter */
+        if (!g_vc.line_seen_once)
+        {
+            MotorCommand_Clear(mcmd);
+            return;
+        }
+
+        /* Si timeout dépassé → arrêter */
+        if (g_vc.line_lost_ticks > LF_LOST_TIMEOUT_TICKS)
+        {
+            MotorCommand_Clear(mcmd);
+            return;
+        }
+
+        /* Tourner dans la direction de la dernière ligne vue */
+        if (g_vc.last_seen_dir == LINE_STATE_LEFT)
+        {
+            /* Dernière ligne vue à gauche → tourner à gauche */
+            mcmd->left_cmd  = LF_SEARCH_LEFT_MOTOR;
+            mcmd->right_cmd = LF_SEARCH_RIGHT_MOTOR;
+            mcmd->coast = false;
+        }
+        else if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
+        {
+            /* Dernière ligne vue à droite → tourner à droite */
+            mcmd->left_cmd  = -LF_SEARCH_RIGHT_MOTOR;
+            mcmd->right_cmd = -LF_SEARCH_LEFT_MOTOR;
+            mcmd->coast = false;
+        }
+        else if (g_vc.last_seen_dir == LINE_STATE_CENTER)
+        {
+            /* Dernière ligne vue au centre -> avancer droit */
+            mcmd->left_cmd  = LF_SPEED_CENTER;
+            mcmd->right_cmd = LF_SPEED_CENTER;
+            mcmd->coast = false;
+        }
+    }
+    else
+    {
+        /* Ligne détectée → calculer la correction PID */
+        
+        /* Calcul PID : P + I + D */
+        int error = g_vc.line_error_filt;
+        
+        /* Terme proportionnel */
+        int p_term = error * LF_KP;
+        
+        /* Terme dérivé */
+        int d_term = (error - g_vc.line_error_prev) * LF_KD;
+        g_vc.line_error_prev = error;
+        
+        /* Terme intégral (avec saturation) */
+        g_vc.line_error_integral += error;
+        if (g_vc.line_error_integral > LF_INTEGRAL_MAX)
+            g_vc.line_error_integral = LF_INTEGRAL_MAX;
+        if (g_vc.line_error_integral < -LF_INTEGRAL_MAX)
+            g_vc.line_error_integral = -LF_INTEGRAL_MAX;
+        
+        int i_term = g_vc.line_error_integral * LF_KI;
+        
+        /* Correction totale */
+        int correction = p_term + i_term + d_term;
+        
+        /* Limiter la correction */
+        if (correction > LF_CORR_MAX) correction = LF_CORR_MAX;
+        if (correction < -LF_CORR_MAX) correction = -LF_CORR_MAX;
+        
+        /* Appliquer la correction aux moteurs */
+        /* Erreur positive = ligne à gauche → tourner à droite */
+        /* Erreur négative = ligne à droite → tourner à gauche */
+        mcmd->left_cmd = LF_SPEED_CENTER - correction;
+        mcmd->right_cmd = LF_SPEED_CENTER + correction;
+        
+        /* Limiter la vitesse minimale */
+        if (mcmd->left_cmd < LF_SPEED_MIN) mcmd->left_cmd = LF_SPEED_MIN;
+        if (mcmd->right_cmd < LF_SPEED_MIN) mcmd->right_cmd = LF_SPEED_MIN;
+        
+        mcmd->coast = false;
+    }
 }
 
 /*
@@ -414,7 +510,71 @@ static void BuildObstacleAvoidMotorCommand(motor_cmd_t *mcmd)
      * Utiliser les constantes OA_...
      */
 
-    MotorCommand_Clear(mcmd);
+
+    /* Vérifier si au moins un capteur est valide */
+
+    g_vc.prox.left_valid = (g_vc.prox.left_mm < OA_SIDE_PIVOT_MM) ? false : true;
+    g_vc.prox.center_valid = (g_vc.prox.center_mm < OA_CENTER_BACKUP_MM) ? false : true;
+    g_vc.prox.right_valid = (g_vc.prox.right_mm < OA_SIDE_PIVOT_MM) ? false : true;
+
+    if (!g_vc.prox.left_valid && !g_vc.prox.center_valid && !g_vc.prox.right_valid)
+    {
+        MotorCommand_Clear(mcmd);
+        return;
+    }
+
+    if (g_vc.prox.center_mm < OA_CENTER_BACKUP_MM)
+    {
+        /* Obstacle au centre → reculer */
+        mcmd->left_cmd = OA_REVERSE_SPEED;
+        mcmd->right_cmd = OA_REVERSE_SPEED;
+        mcmd->coast = false;
+    }
+    else if (g_vc.prox.left_mm < OA_SIDE_PIVOT_MM)
+    {
+        /* Obstacle à gauche → pivoter à droite */
+        mcmd->left_cmd = OA_PIVOT_FAST;
+        mcmd->right_cmd = -OA_PIVOT_FAST;
+        mcmd->coast = false;
+    }
+    else if (g_vc.prox.right_mm < OA_SIDE_PIVOT_MM)
+    {
+        /* Obstacle à droite → pivoter à gauche */
+        mcmd->left_cmd = -OA_PIVOT_FAST;
+        mcmd->right_cmd = OA_PIVOT_FAST;
+        mcmd->coast = false;
+    }
+    else if (g_vc.prox.left_mm < OA_SIDE_WARN_MM)
+    {
+        /* Obstacle proche à gauche → correction douce vers la droite */
+        mcmd->left_cmd = OA_FORWARD_SPEED + OA_TURN_SOFT;
+        mcmd->right_cmd = OA_FORWARD_SPEED - OA_TURN_SOFT;
+        mcmd->coast = false;
+    }
+    else if (g_vc.prox.right_mm < OA_SIDE_WARN_MM)
+    {
+        /* Obstacle proche à droite → correction douce vers la gauche */
+        mcmd->left_cmd = OA_FORWARD_SPEED - OA_TURN_SOFT;
+        mcmd->right_cmd = OA_FORWARD_SPEED + OA_TURN_SOFT;
+        mcmd->coast = false;
+    }
+    else if (g_vc.prox.center_mm < OA_CENTER_TURN_OK_MM)
+    {
+        /* Obstacle pas trop proche au centre → avancer lentement */
+        mcmd->left_cmd = OA_FORWARD_SLOW;
+        mcmd->right_cmd = OA_FORWARD_SLOW;
+        mcmd->coast = false;
+    }
+    else
+    {
+        /* Tout est libre → avancer */
+        mcmd->left_cmd = OA_FORWARD_SPEED;
+        mcmd->right_cmd = OA_FORWARD_SPEED;
+        mcmd->coast = false;
+    }
+
+    mcmd->left_cmd = clamp100(mcmd->left_cmd);
+    mcmd->right_cmd = clamp100(mcmd->right_cmd);
 }
 
 
@@ -480,12 +640,17 @@ static uint8_t VehicleControl_ComputeChecksum(const char *frame)
      * Vérifier que la trame commence par '<'.
      * Si ce n'est pas le cas, retourner 0.
      */
+    if (*frame != '<')
+    {
+        return 0;
+    }
 
     /*
      * TODO 6 :
      * Avancer le pointeur pour ignorer le caractère '<'.
      * frame++;
      */
+    frame++;
 
     /*
      * TODO 7 :
@@ -496,14 +661,22 @@ static uint8_t VehicleControl_ComputeChecksum(const char *frame)
      * - si oui, arrêter la boucle
      * - sinon, ajouter le caractère à sum
      */
+    while (*frame != '\0')
+    {
+        if (strncmp(frame, ";chk=", 5) == 0)
+        {
+            break;
+        }
+        sum += *frame;
+        frame++;
+    }
 
     /*
      * TODO 8 :
      * Retourner les 8 bits de poids faible de sum.
      * return (uint8_t)(sum & 0xFF);
      */
-
-    return 0;
+    return (uint8_t)(sum & 0xFF);
 }
 
 
@@ -552,6 +725,12 @@ bool VehicleControl_ParseFrame(const char *frame, control_cmd_t *cmd)
      *     return false;
      * }
      */
+
+    uint8_t computed_chk = VehicleControl_ComputeChecksum(frame);
+    if (computed_chk != (uint8_t)cmd->chk)
+    {
+        return false;
+    }
 
     /* Limites mode */
     if (cmd->mode < 0) cmd->mode = 0;
