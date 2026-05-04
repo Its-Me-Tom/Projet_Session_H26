@@ -365,9 +365,6 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
      *    - sinon tourner dans la direction de la dernière ligne vue
      */
 
-    /* Réinitialiser le compteur de ticks perdus */
-    g_vc.line_lost_ticks = 0;
-
     /* Vérifier si la ligne est détectée */
     if (g_vc.line_state == LINE_STATE_LOST || g_vc.line_state == LINE_STATE_UNKNOWN)
     {
@@ -377,6 +374,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         /* Si aucune ligne n'a jamais été vue → arrêter */
         if (!g_vc.line_seen_once)
         {
+            g_vc.line_lost_ticks = 0;
             MotorCommand_Clear(mcmd);
             return;
         }
@@ -384,6 +382,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         /* Si timeout dépassé → arrêter */
         if (g_vc.line_lost_ticks > LF_LOST_TIMEOUT_TICKS)
         {
+            g_vc.line_lost_ticks = 0;
             MotorCommand_Clear(mcmd);
             return;
         }
@@ -399,8 +398,8 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         else if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
         {
             /* Dernière ligne vue à droite → tourner à droite */
-            mcmd->left_cmd  = -LF_SEARCH_RIGHT_MOTOR;
-            mcmd->right_cmd = -LF_SEARCH_LEFT_MOTOR;
+            mcmd->left_cmd  = LF_SEARCH_RIGHT_MOTOR;
+            mcmd->right_cmd = LF_SEARCH_LEFT_MOTOR;
             mcmd->coast = false;
         }
         else if (g_vc.last_seen_dir == LINE_STATE_CENTER)
