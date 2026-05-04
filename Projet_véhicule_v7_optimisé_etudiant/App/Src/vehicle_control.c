@@ -61,6 +61,9 @@ typedef struct
     int line_error_prev;
     int line_error_integral;
 
+    // variable ajouter
+    int last_correction;
+
 } vehicle_control_ctx_t;
 
 /*============================================================================
@@ -318,6 +321,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
 
     if (!g_vc.line_follow_enabled)
     {
+    	g_vc.last_correction = 0;
         MotorCommand_Clear(mcmd);
         return;
     }
@@ -375,6 +379,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         if (!g_vc.line_seen_once)
         {
             g_vc.line_lost_ticks = 0;
+            g_vc.last_correction = 0;
             MotorCommand_Clear(mcmd);
             return;
         }
@@ -383,6 +388,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         if (g_vc.line_lost_ticks > LF_LOST_TIMEOUT_TICKS)
         {
             g_vc.line_lost_ticks = 0;
+            g_vc.last_correction = 0;
             MotorCommand_Clear(mcmd);
             return;
         }
@@ -434,7 +440,16 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         int i_term = g_vc.line_error_integral * LF_KI;
         
         /* Correction totale */
-        int correction = p_term + i_term + d_term;
+        int target = p_term + i_term + d_term;
+
+        /* Limiter la variation entre deux cycles */
+        int delta = target - g_vc.last_correction;
+
+        if (delta > LF_CORR_SLEW_MAX)  delta = LF_CORR_SLEW_MAX;
+        if (delta < -LF_CORR_SLEW_MAX) delta = -LF_CORR_SLEW_MAX;
+
+        int correction = g_vc.last_correction + delta;
+        g_vc.last_correction = correction;
         
         /* Limiter la correction */
         if (correction > LF_CORR_MAX) correction = LF_CORR_MAX;
@@ -443,14 +458,24 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         /* Appliquer la correction aux moteurs */
         /* Erreur positive = ligne à gauche → tourner à droite */
         /* Erreur négative = ligne à droite → tourner à gauche */
-        mcmd->left_cmd = LF_SPEED_CENTER - correction;
-        mcmd->right_cmd = LF_SPEED_CENTER + correction;
+        int base_speed = LF_SPEED_CENTER - abs(correction) * LF_SPEED_REDUCTION_GAIN;
+
+        if (base_speed < LF_SPEED_MIN)
+            base_speed = LF_SPEED_MIN;
+
+        mcmd->left_cmd  = base_speed - correction;
+        mcmd->right_cmd = base_speed + correction;
         
         /* Limiter la vitesse minimale */
         if (mcmd->left_cmd < LF_SPEED_MIN) mcmd->left_cmd = LF_SPEED_MIN;
         if (mcmd->right_cmd < LF_SPEED_MIN) mcmd->right_cmd = LF_SPEED_MIN;
         
         mcmd->coast = false;
+
+        if (abs(error) < SMALL_ERROR_THRESHOLD)
+        {
+            g_vc.line_error_integral = 0;
+        }
     }
 }
 
