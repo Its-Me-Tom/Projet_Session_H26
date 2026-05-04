@@ -37,6 +37,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <stdlib.h>
+
 /*============================================================================
  * PRIVATE TYPES
  *===========================================================================*/
@@ -61,6 +63,9 @@ typedef struct
     int line_error_prev;
     int line_error_integral;
 
+    // variable ajouter
+    int last_correction;
+
 } vehicle_control_ctx_t;
 
 /*============================================================================
@@ -77,18 +82,22 @@ static vehicle_control_ctx_t g_vc = {0};
 
 /* ===== LINE FOLLOW TUNING ===== */
 #define LF_SPEED_CENTER            30
-#define LF_SPEED_MIN               20
+#define LF_SPEED_MIN               10
 
-#define LF_KP                       4
+#define LF_KP                       6
 #define LF_KD                       1
 #define LF_KI                       1
 
-#define LF_CORR_MAX                30
+#define LF_CORR_MAX                60
 #define LF_SPEED_REDUCTION_STEP     1
 #define LF_INTEGRAL_MAX            40
 
+#define LF_CORR_SLEW_MAX 			5
+
 #define LF_SEARCH_LEFT_MOTOR      -30
 #define LF_SEARCH_RIGHT_MOTOR      30
+
+#define SMALL_ERROR_THRESHOLD 5
 
 
 /* ===== OBSTACLE AVOID TUNING ===== */
@@ -318,6 +327,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
 
     if (!g_vc.line_follow_enabled)
     {
+    	g_vc.last_correction = 0;
         MotorCommand_Clear(mcmd);
         return;
     }
@@ -365,94 +375,38 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
      *    - sinon tourner dans la direction de la dernière ligne vue
      */
 
-    /* Réinitialiser le compteur de ticks perdus */
-    g_vc.line_lost_ticks = 0;
-
     /* Vérifier si la ligne est détectée */
-    if (g_vc.line_state == LINE_STATE_LOST || g_vc.line_state == LINE_STATE_UNKNOWN)
-    {
-        /* Ligne perdue */
-        g_vc.line_lost_ticks++;
+    int error = g_vc.line_error_filt;
 
-        /* Si aucune ligne n'a jamais été vue → arrêter */
-        if (!g_vc.line_seen_once)
-        {
-            MotorCommand_Clear(mcmd);
-            return;
-        }
+    /* normalisation de l'erreur (0..1 approx) */
+    float norm = (float)error / 100.0f;
 
-        /* Si timeout dépassé → arrêter */
-        if (g_vc.line_lost_ticks > LF_LOST_TIMEOUT_TICKS)
-        {
-            MotorCommand_Clear(mcmd);
-            return;
-        }
+    /* correction P uniquement (stable + prévisible) */
+    int correction = (int)(norm * LF_CORR_MAX * LF_KP);
 
-        /* Tourner dans la direction de la dernière ligne vue */
-        if (g_vc.last_seen_dir == LINE_STATE_LEFT)
-        {
-            /* Dernière ligne vue à gauche → tourner à gauche */
-            mcmd->left_cmd  = LF_SEARCH_LEFT_MOTOR;
-            mcmd->right_cmd = LF_SEARCH_RIGHT_MOTOR;
-            mcmd->coast = false;
-        }
-        else if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
-        {
-            /* Dernière ligne vue à droite → tourner à droite */
-            mcmd->left_cmd  = -LF_SEARCH_RIGHT_MOTOR;
-            mcmd->right_cmd = -LF_SEARCH_LEFT_MOTOR;
-            mcmd->coast = false;
-        }
-        else if (g_vc.last_seen_dir == LINE_STATE_CENTER)
-        {
-            /* Dernière ligne vue au centre -> avancer droit */
-            mcmd->left_cmd  = LF_SPEED_CENTER;
-            mcmd->right_cmd = LF_SPEED_CENTER;
-            mcmd->coast = false;
-        }
-    }
-    else
-    {
-        /* Ligne détectée → calculer la correction PID */
-        
-        /* Calcul PID : P + I + D */
-        int error = g_vc.line_error_filt;
-        
-        /* Terme proportionnel */
-        int p_term = error * LF_KP;
-        
-        /* Terme dérivé */
-        int d_term = (error - g_vc.line_error_prev) * LF_KD;
-        g_vc.line_error_prev = error;
-        
-        /* Terme intégral (avec saturation) */
-        g_vc.line_error_integral += error;
-        if (g_vc.line_error_integral > LF_INTEGRAL_MAX)
-            g_vc.line_error_integral = LF_INTEGRAL_MAX;
-        if (g_vc.line_error_integral < -LF_INTEGRAL_MAX)
-            g_vc.line_error_integral = -LF_INTEGRAL_MAX;
-        
-        int i_term = g_vc.line_error_integral * LF_KI;
-        
-        /* Correction totale */
-        int correction = p_term + i_term + d_term;
-        
-        /* Limiter la correction */
-        if (correction > LF_CORR_MAX) correction = LF_CORR_MAX;
-        if (correction < -LF_CORR_MAX) correction = -LF_CORR_MAX;
-        
-        /* Appliquer la correction aux moteurs */
-        /* Erreur positive = ligne à gauche → tourner à droite */
-        /* Erreur négative = ligne à droite → tourner à gauche */
-        mcmd->left_cmd = LF_SPEED_CENTER - correction;
-        mcmd->right_cmd = LF_SPEED_CENTER + correction;
-        
-        /* Limiter la vitesse minimale */
-        if (mcmd->left_cmd < LF_SPEED_MIN) mcmd->left_cmd = LF_SPEED_MIN;
-        if (mcmd->right_cmd < LF_SPEED_MIN) mcmd->right_cmd = LF_SPEED_MIN;
-        
-        mcmd->coast = false;
-    }
+    /* clamp correction */
+    if (correction > LF_CORR_MAX) correction = LF_CORR_MAX;
+    if (correction < -LF_CORR_MAX) correction = -LF_CORR_MAX;
+
+    /* vitesse adaptative continue */
+    int abs_corr = abs(correction);
+
+    /* mapping continu : plus ça tourne, plus ça ralentit */
+     int base_speed = LF_SPEED_CENTER - (abs_corr * abs_corr) * 0.01f;
+
+    /* sécurité minimum (PAS STOP) */
+    if (base_speed < LF_SPEED_MIN)
+        base_speed = LF_SPEED_MIN;
+
+    /* mix différentiel */
+    int left  = base_speed - correction;
+    int right = base_speed + correction;
+
+    /* clamp global */
+    mcmd->left_cmd  = clamp100(left);
+    mcmd->right_cmd = clamp100(right);
+
+    mcmd->coast = false;
 }
 
 /*
