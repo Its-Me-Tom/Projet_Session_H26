@@ -377,7 +377,16 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
 
     if (g_vc.line_state == LINE_STATE_LOST || g_vc.line_state == LINE_STATE_UNKNOWN)
     {
+
         g_vc.line_lost_ticks++;
+
+        if (g_vc.line_lost_ticks < 10)
+        {
+            mcmd->left_cmd  = LF_SPEED_CENTER;
+            mcmd->right_cmd = LF_SPEED_CENTER;
+            mcmd->coast = false;
+            return;
+        }
 
         /* jamais vue → stop */
         if (!g_vc.line_seen_once)
@@ -387,7 +396,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         }
 
         /* timeout → stop */
-        if (g_vc.line_lost_ticks > LF_LOST_TIMEOUT_TICKS)
+        if (g_vc.line_lost_ticks >= 3000)
         {
             g_vc.line_lost_ticks = 0;
             g_vc.last_correction = 0;
@@ -412,14 +421,6 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
             mcmd->right_cmd = 20;
         }
 
-        mcmd->coast = false;
-        return;
-    }
-
-    if (g_vc.line_lost_ticks < 5)
-    {
-        mcmd->left_cmd  = LF_SPEED_CENTER;
-        mcmd->right_cmd = LF_SPEED_CENTER;
         mcmd->coast = false;
         return;
     }
