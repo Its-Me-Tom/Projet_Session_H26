@@ -78,11 +78,12 @@ static vehicle_control_ctx_t g_vc = {0};
  * PRIVATE DEFINES
  *===========================================================================*/
 
-#define LF_LOST_TIMEOUT_TICKS   1000		//300 x 10 ms = 3000 ms = 3 s
+#define LF_LOST_TIMEOUT_TICKS   300		//300 x 10 ms = 3000 ms = 3 s
 
 /* ===== LINE FOLLOW TUNING ===== */
 #define LF_SPEED_CENTER            30
 #define LF_SPEED_MIN               10
+#define LF_SPEED_MAX			   50
 
 #define LF_KP                       6
 #define LF_KD                       1
@@ -379,54 +380,32 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
     {
         g_vc.line_lost_ticks++;
 
-        /* jamais vue → arrêt immédiat */
+        /* jamais vue → arrêt */
         if (!g_vc.line_seen_once)
         {
             MotorCommand_Clear(mcmd);
-            return;
         }
-
-        /* courte perte → continue tout droit */
-        if (g_vc.line_lost_ticks < 5)
+        if (g_vc.line_lost_ticks < 10000)
         {
-            mcmd->left_cmd  = LF_SPEED_CENTER;
-            mcmd->right_cmd = LF_SPEED_CENTER;
-            mcmd->coast = false;
-            return;
-        }
-
-        /* perte moyenne → recherche directionnelle */
-        if (g_vc.line_lost_ticks < LF_LOST_TIMEOUT_TICKS)
+			if (g_vc.last_seen_dir == LINE_STATE_LEFT)
+			{
+				mcmd->left_cmd = LF_SPEED_MIN;
+				mcmd->right_cmd = LF_SPEED_MAX;
+			}
+			if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
+			{
+				mcmd->left_cmd = LF_SPEED_MIN;
+				mcmd->right_cmd = LF_SPEED_MAX;
+			}
+		}
+        else
         {
-            if (g_vc.last_seen_dir == LINE_STATE_LEFT)
-            {
-                mcmd->left_cmd  = -20;
-                mcmd->right_cmd = 20;
-            }
-            else if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
-            {
-                mcmd->left_cmd  = 20;
-                mcmd->right_cmd = -20;
-            }
-            else
-            {
-                mcmd->left_cmd  = 20;
-                mcmd->right_cmd = 20;
-            }
-
-            mcmd->coast = false;
-            return;
+        	MotorCommand_Clear(mcmd);
         }
-
-        /* perte longue → arrêt */
-        g_vc.line_lost_ticks = 0;
-        g_vc.last_correction = 0;
-        MotorCommand_Clear(mcmd);
-        return;
     }
     else
     {
-    	g_vc.line_lost_ticks = 0;
+        g_vc.line_lost_ticks = 0;
     }
 
 
