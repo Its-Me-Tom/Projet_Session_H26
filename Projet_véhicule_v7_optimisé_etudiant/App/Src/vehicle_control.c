@@ -375,6 +375,47 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
      *    - sinon tourner dans la direction de la dernière ligne vue
      */
 
+    if (g_vc.line_state == LINE_STATE_LOST || g_vc.line_state == LINE_STATE_UNKNOWN)
+    {
+        g_vc.line_lost_ticks++;
+
+        /* jamais vue → stop */
+        if (!g_vc.line_seen_once)
+        {
+            MotorCommand_Clear(mcmd);
+            return;
+        }
+
+        /* timeout → stop */
+        if (g_vc.line_lost_ticks > LF_LOST_TIMEOUT_TICKS)
+        {
+            g_vc.line_lost_ticks = 0;
+            g_vc.last_correction = 0;
+            MotorCommand_Clear(mcmd);
+            return;
+        }
+
+        /* recherche directionnelle */
+        if (g_vc.last_seen_dir == LINE_STATE_LEFT)
+        {
+            mcmd->left_cmd  = -20;
+            mcmd->right_cmd = 20;
+        }
+        else if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
+        {
+            mcmd->left_cmd  = 20;
+            mcmd->right_cmd = -20;
+        }
+        else
+        {
+            mcmd->left_cmd  = 20;
+            mcmd->right_cmd = 20;
+        }
+
+        mcmd->coast = false;
+        return;
+    }
+
     /* Vérifier si la ligne est détectée */
     int error = g_vc.line_error_filt;
 
