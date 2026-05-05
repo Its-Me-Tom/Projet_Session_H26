@@ -78,17 +78,18 @@ static vehicle_control_ctx_t g_vc = {0};
  * PRIVATE DEFINES
  *===========================================================================*/
 
-#define LF_LOST_TIMEOUT_TICKS   300		//300 x 10 ms = 3000 ms = 3 s
+#define LF_LOST_TIMEOUT_TICKS   500		//300 x 10 ms = 3000 ms = 3 s
 
 /* ===== LINE FOLLOW TUNING ===== */
 #define LF_SPEED_CENTER            30
 #define LF_SPEED_MIN               10
+#define LF_SPEED_MAX			   100
 
 #define LF_KP                       6
 #define LF_KD                       1
 #define LF_KI                       1
 
-#define LF_CORR_MAX                60
+#define LF_CORR_MAX               200
 #define LF_SPEED_REDUCTION_STEP     1
 #define LF_INTEGRAL_MAX            40
 
@@ -374,6 +375,40 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
      *    - si timeout dépassé : arrêt
      *    - sinon tourner dans la direction de la dernière ligne vue
      */
+
+    if (g_vc.line_state == LINE_STATE_LOST || g_vc.line_state == LINE_STATE_UNKNOWN)
+    {
+        g_vc.line_lost_ticks++;
+
+        /* jamais vue → arrêt */
+        if (!g_vc.line_seen_once)
+        {
+            MotorCommand_Clear(mcmd);
+        }
+        if (g_vc.line_lost_ticks < LF_LOST_TIMEOUT_TICKS)
+        {
+			if (g_vc.last_seen_dir == LINE_STATE_LEFT)
+			{
+				mcmd->left_cmd = LF_SPEED_MIN;
+				mcmd->right_cmd = LF_SPEED_MAX;
+			}
+			if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
+			{
+				mcmd->left_cmd = LF_SPEED_MIN;
+				mcmd->right_cmd = LF_SPEED_MAX;
+			}
+		}
+        else
+        {
+        	MotorCommand_Clear(mcmd);
+        }
+    }
+    else
+    {
+        g_vc.line_lost_ticks = 0;
+    }
+
+
 
     /* Vérifier si la ligne est détectée */
     int error = g_vc.line_error_filt;
