@@ -78,12 +78,12 @@ static vehicle_control_ctx_t g_vc = {0};
  * PRIVATE DEFINES
  *===========================================================================*/
 
-#define LF_LOST_TIMEOUT_TICKS   300		//300 x 10 ms = 3000 ms = 3 s
+#define LF_LOST_TIMEOUT_TICKS   500		//300 x 10 ms = 3000 ms = 3 s
 
 /* ===== LINE FOLLOW TUNING ===== */
 #define LF_SPEED_CENTER            30
 #define LF_SPEED_MIN               10
-#define LF_SPEED_MAX			   50
+#define LF_SPEED_MAX			   100
 
 #define LF_KP                       6
 #define LF_KD                       1
@@ -385,7 +385,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         {
             MotorCommand_Clear(mcmd);
         }
-        if (g_vc.line_lost_ticks < 10000)
+        if (g_vc.line_lost_ticks < LF_LOST_TIMEOUT_TICKS)
         {
 			if (g_vc.last_seen_dir == LINE_STATE_LEFT)
 			{
