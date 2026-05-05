@@ -37,6 +37,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <stdlib.h>
+
 /*============================================================================
  * PRIVATE TYPES
  *===========================================================================*/
@@ -61,6 +63,9 @@ typedef struct
     int line_error_prev;
     int line_error_integral;
 
+    // variable ajouter
+    int last_correction;
+
 } vehicle_control_ctx_t;
 
 /*============================================================================
@@ -77,18 +82,22 @@ static vehicle_control_ctx_t g_vc = {0};
 
 /* ===== LINE FOLLOW TUNING ===== */
 #define LF_SPEED_CENTER            30
-#define LF_SPEED_MIN               20
+#define LF_SPEED_MIN               10
 
-#define LF_KP                       4
+#define LF_KP                       6
 #define LF_KD                       1
 #define LF_KI                       1
 
-#define LF_CORR_MAX                30
+#define LF_CORR_MAX                60
 #define LF_SPEED_REDUCTION_STEP     1
 #define LF_INTEGRAL_MAX            40
 
+#define LF_CORR_SLEW_MAX 			5
+
 #define LF_SEARCH_LEFT_MOTOR      -30
 #define LF_SEARCH_RIGHT_MOTOR      30
+
+#define SMALL_ERROR_THRESHOLD 5
 
 
 /* ===== OBSTACLE AVOID TUNING ===== */
@@ -318,6 +327,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
 
     if (!g_vc.line_follow_enabled)
     {
+    	g_vc.last_correction = 0;
         MotorCommand_Clear(mcmd);
         return;
     }
@@ -366,10 +376,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
      */
 
     /* Vérifier si la ligne est détectée */
-    if (g_vc.line_state == LINE_STATE_LOST || g_vc.line_state == LINE_STATE_UNKNOWN)
-    {
-        /* Ligne perdue */
-        g_vc.line_lost_ticks++;
+    int error = g_vc.line_error_filt;
 
         /* Si aucune ligne n'a jamais été vue → arrêter */
         if (!g_vc.line_seen_once)
