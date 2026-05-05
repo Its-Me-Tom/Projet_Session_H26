@@ -416,6 +416,14 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         return;
     }
 
+    if (g_vc.line_lost_ticks < 5)
+    {
+        mcmd->left_cmd  = LF_SPEED_CENTER;
+        mcmd->right_cmd = LF_SPEED_CENTER;
+        mcmd->coast = false;
+        return;
+    }
+
     /* Vérifier si la ligne est détectée */
     int error = g_vc.line_error_filt;
 
