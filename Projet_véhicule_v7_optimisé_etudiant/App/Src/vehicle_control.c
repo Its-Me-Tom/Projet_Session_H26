@@ -105,9 +105,9 @@ static vehicle_control_ctx_t g_vc = {0};
 #define OA_SIDE_WARN_MM            300   /* correction douce plus loin */
 
 #define OA_CENTER_BACKUP_MM        220   /* si obstacle centre < 200 mm -> recule */
-#define OA_CENTER_TURN_OK_MM       220   /* pour pouvoir réavancer après pivot */
+#define OA_CENTER_TURN_OK_MM       300   /* pour pouvoir réavancer après pivot */
 
-#define OA_FORWARD_SPEED            18
+#define OA_FORWARD_SPEED            24
 #define OA_FORWARD_SLOW             12
 
 #define OA_PIVOT_FAST               80   /* pivot sur place */
@@ -378,35 +378,90 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
     /* Vérifier si la ligne est détectée */
     int error = g_vc.line_error_filt;
 
-    /* normalisation de l'erreur (0..1 approx) */
-    float norm = (float)error / 100.0f;
+        /* Si aucune ligne n'a jamais été vue → arrêter */
+        if (!g_vc.line_seen_once)
+        {
+            MotorCommand_Clear(mcmd);
+            return;
+        }
 
-    /* correction P uniquement (stable + prévisible) */
-    int correction = (int)(norm * LF_CORR_MAX * LF_KP);
+        /* Si timeout dépassé → arrêter */
+        if (g_vc.line_lost_ticks > LF_LOST_TIMEOUT_TICKS)
+        {
+            MotorCommand_Clear(mcmd);
+            return;
+        }
 
-    /* clamp correction */
-    if (correction > LF_CORR_MAX) correction = LF_CORR_MAX;
-    if (correction < -LF_CORR_MAX) correction = -LF_CORR_MAX;
+        /* Tourner dans la direction de la dernière ligne vue */
+        if (g_vc.last_seen_dir == LINE_STATE_LEFT)
+        {
+            /* Dernière ligne vue à gauche → tourner à gauche */
+            mcmd->left_cmd  = LF_SEARCH_LEFT_MOTOR;
+            mcmd->right_cmd = LF_SEARCH_RIGHT_MOTOR;
+            mcmd->coast = false;
+        }
+        else if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
+        {
+            /* Dernière ligne vue à droite → tourner à droite */
+            mcmd->left_cmd  = LF_SEARCH_RIGHT_MOTOR;
+            mcmd->right_cmd = LF_SEARCH_LEFT_MOTOR;
+            mcmd->coast = false;
+        }
+        else if (g_vc.last_seen_dir == LINE_STATE_CENTER)
+        {
+            /* Dernière ligne vue au centre -> avancer droit */
+            mcmd->left_cmd  = LF_SPEED_CENTER;
+            mcmd->right_cmd = LF_SPEED_CENTER;
+            mcmd->coast = false;
+        }
+    }
+    else
+    {
+        /* Ligne détectée → remettre line_lost_ticks à 0 */
+        g_vc.line_lost_ticks = 0;
 
-    /* vitesse adaptative continue */
-    int abs_corr = abs(correction);
-
-    /* mapping continu : plus ça tourne, plus ça ralentit */
-     int base_speed = LF_SPEED_CENTER - (abs_corr * abs_corr) * 0.01f;
-
-    /* sécurité minimum (PAS STOP) */
-    if (base_speed < LF_SPEED_MIN)
-        base_speed = LF_SPEED_MIN;
-
-    /* mix différentiel */
-    int left  = base_speed - correction;
-    int right = base_speed + correction;
-
-    /* clamp global */
-    mcmd->left_cmd  = clamp100(left);
-    mcmd->right_cmd = clamp100(right);
-
-    mcmd->coast = false;
+        /* Ligne détectée → calculer la correction PID */
+        
+        /* Calcul PID : P + I + D */
+        int error = g_vc.line_error_filt;
+        
+        /* Terme proportionnel */
+        int p_term = error * LF_KP;
+        
+        /* Terme dérivé */
+        int d_term = (error - g_vc.line_error_prev) * LF_KD;
+        g_vc.line_error_prev = error;
+        
+        /* Terme intégral (avec saturation) */
+        g_vc.line_error_integral += error;
+        if (g_vc.line_error_integral > LF_INTEGRAL_MAX)
+            g_vc.line_error_integral = LF_INTEGRAL_MAX;
+        if (g_vc.line_error_integral < -LF_INTEGRAL_MAX)
+            g_vc.line_error_integral = -LF_INTEGRAL_MAX;
+        
+        int i_term = g_vc.line_error_integral * LF_KI;
+        
+        /* Correction totale */
+        int correction = p_term + i_term + d_term;
+        
+        /* Limiter la correction */
+        if (correction > LF_CORR_MAX) correction = LF_CORR_MAX;
+        if (correction < -LF_CORR_MAX) correction = -LF_CORR_MAX;
+        
+        /* Appliquer la correction aux moteurs */
+        /* Erreur positive = ligne à gauche → tourner à droite */
+        /* Erreur négative = ligne à droite → tourner à gauche */
+        mcmd->left_cmd = LF_SPEED_CENTER - correction;
+        mcmd->right_cmd = LF_SPEED_CENTER + correction;
+        
+        /* Limiter la vitesse minimale */
+        if (mcmd->left_cmd < LF_SPEED_MIN) mcmd->left_cmd = LF_SPEED_MIN;
+        if (mcmd->right_cmd < LF_SPEED_MIN) mcmd->right_cmd = LF_SPEED_MIN;
+        
+        mcmd->coast = false;
+    }
+    mcmd->left_cmd = clamp100(mcmd->left_cmd);
+    mcmd->right_cmd = clamp100(mcmd->right_cmd);
 }
 
 /*
@@ -416,6 +471,9 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
  */
 static void BuildObstacleAvoidMotorCommand(motor_cmd_t *mcmd)
 {
+    static bool is_backing_up = false;
+    static bool ready_to_turn = false;
+
     if (mcmd == NULL)
         return;
 
@@ -467,67 +525,104 @@ static void BuildObstacleAvoidMotorCommand(motor_cmd_t *mcmd)
 
     /* Vérifier si au moins un capteur est valide */
 
-    g_vc.prox.left_valid = (g_vc.prox.left_mm < OA_SIDE_PIVOT_MM) ? false : true;
-    g_vc.prox.center_valid = (g_vc.prox.center_mm < OA_CENTER_BACKUP_MM) ? false : true;
-    g_vc.prox.right_valid = (g_vc.prox.right_mm < OA_SIDE_PIVOT_MM) ? false : true;
-
+    /* Aucun capteur valide */
     if (!g_vc.prox.left_valid && !g_vc.prox.center_valid && !g_vc.prox.right_valid)
     {
         MotorCommand_Clear(mcmd);
         return;
     }
 
-    if (g_vc.prox.center_mm < OA_CENTER_BACKUP_MM)
+    mcmd->coast = false;
+
+    /* =========================
+       1. TRIGGER BACKUP
+       ========================= */
+    if (g_vc.prox.center_mm < OA_CENTER_BACKUP_MM) // <220 mm
     {
-        /* Obstacle au centre → reculer */
-        mcmd->left_cmd = OA_REVERSE_SPEED;
-        mcmd->right_cmd = OA_REVERSE_SPEED;
-        mcmd->coast = false;
+        is_backing_up = true;
+        ready_to_turn = false;
     }
-    else if (g_vc.prox.left_mm < OA_SIDE_PIVOT_MM)
+
+    /* =========================
+       2. BACKUP PHASE
+       ========================= */
+    if (is_backing_up)
     {
-        /* Obstacle à gauche → pivoter à droite */
-        mcmd->left_cmd = OA_PIVOT_FAST;
+        mcmd->left_cmd  = OA_REVERSE_SPEED;
+        mcmd->right_cmd = OA_REVERSE_SPEED;
+
+        /* Dès qu'on sort de la zone critique */
+        if (g_vc.prox.center_mm > OA_CENTER_BACKUP_MM)
+        {
+            is_backing_up = false;
+            ready_to_turn = true;
+        }
+
+        return; // IMPORTANT : ignore tout le reste
+    }
+
+    /* =========================
+       3. TURN PHASE (UNE FOIS)
+       ========================= */
+    if (ready_to_turn)
+    {
+        if (g_vc.prox.left_mm < g_vc.prox.right_mm)
+        {
+            mcmd->left_cmd  =  OA_PIVOT_FAST;
+            mcmd->right_cmd = -OA_PIVOT_FAST;
+        }
+        else
+        {
+            mcmd->left_cmd  = -OA_PIVOT_FAST;
+            mcmd->right_cmd =  OA_PIVOT_FAST;
+        }
+
+        /* Quand c'est vraiment dégagé */
+        if (g_vc.prox.center_mm > OA_CENTER_TURN_OK_MM) // >300 mm
+        {
+            ready_to_turn = false;
+        }
+
+        return; // IMPORTANT
+    }
+
+    /* =========================
+       4. NORMAL NAVIGATION
+       ========================= */
+
+    mcmd->left_cmd  = OA_FORWARD_SPEED;
+    mcmd->right_cmd = OA_FORWARD_SPEED;
+
+    if (g_vc.prox.center_mm < OA_CENTER_TURN_OK_MM)
+    {
+        /* Obstacle modéré → ralentir */
+        mcmd->left_cmd  = OA_FORWARD_SLOW;
+        mcmd->right_cmd = OA_FORWARD_SLOW;
+    }
+
+    /* ⚠️ Les côtés seulement si PAS en backup/turn */
+    if (g_vc.prox.left_mm < OA_SIDE_PIVOT_MM)
+    {
+        mcmd->left_cmd  =  OA_PIVOT_FAST;
         mcmd->right_cmd = -OA_PIVOT_FAST;
-        mcmd->coast = false;
     }
     else if (g_vc.prox.right_mm < OA_SIDE_PIVOT_MM)
     {
-        /* Obstacle à droite → pivoter à gauche */
-        mcmd->left_cmd = -OA_PIVOT_FAST;
-        mcmd->right_cmd = OA_PIVOT_FAST;
-        mcmd->coast = false;
+        mcmd->left_cmd  = -OA_PIVOT_FAST;
+        mcmd->right_cmd =  OA_PIVOT_FAST;
     }
     else if (g_vc.prox.left_mm < OA_SIDE_WARN_MM)
     {
-        /* Obstacle proche à gauche → correction douce vers la droite */
-        mcmd->left_cmd = OA_FORWARD_SPEED + OA_TURN_SOFT;
+        mcmd->left_cmd  = OA_FORWARD_SPEED + OA_TURN_SOFT;
         mcmd->right_cmd = OA_FORWARD_SPEED - OA_TURN_SOFT;
-        mcmd->coast = false;
     }
     else if (g_vc.prox.right_mm < OA_SIDE_WARN_MM)
     {
-        /* Obstacle proche à droite → correction douce vers la gauche */
-        mcmd->left_cmd = OA_FORWARD_SPEED - OA_TURN_SOFT;
+        mcmd->left_cmd  = OA_FORWARD_SPEED - OA_TURN_SOFT;
         mcmd->right_cmd = OA_FORWARD_SPEED + OA_TURN_SOFT;
-        mcmd->coast = false;
-    }
-    else if (g_vc.prox.center_mm < OA_CENTER_TURN_OK_MM)
-    {
-        /* Obstacle pas trop proche au centre → avancer lentement */
-        mcmd->left_cmd = OA_FORWARD_SLOW;
-        mcmd->right_cmd = OA_FORWARD_SLOW;
-        mcmd->coast = false;
-    }
-    else
-    {
-        /* Tout est libre → avancer */
-        mcmd->left_cmd = OA_FORWARD_SPEED;
-        mcmd->right_cmd = OA_FORWARD_SPEED;
-        mcmd->coast = false;
     }
 
-    mcmd->left_cmd = clamp100(mcmd->left_cmd);
+    mcmd->left_cmd  = clamp100(mcmd->left_cmd);
     mcmd->right_cmd = clamp100(mcmd->right_cmd);
 }
 
