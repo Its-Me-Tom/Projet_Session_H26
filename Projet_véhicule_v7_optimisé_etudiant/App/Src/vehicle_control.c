@@ -88,7 +88,7 @@ static vehicle_control_ctx_t g_vc = {0};
 #define LF_KD                       1
 #define LF_KI                       1
 
-#define LF_CORR_MAX                60
+#define LF_CORR_MAX               200
 #define LF_SPEED_REDUCTION_STEP     1
 #define LF_INTEGRAL_MAX            40
 
