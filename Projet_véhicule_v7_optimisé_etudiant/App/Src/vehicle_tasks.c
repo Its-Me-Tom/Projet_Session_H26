@@ -427,7 +427,7 @@ static void Task_MainController(void *argument)
             if ((xTaskGetTickCount() - last_auto_ctrl_tick) > pdMS_TO_TICKS(AUTO_CTRL_PERIOD_MS))
             {
                 VehicleControl_GetMotorCommand(&mcmd);
-                ApplyDiagnosticMotorCommand(&mcmd);
+                //ApplyDiagnosticMotorCommand(&mcmd);
                 PublishMotorCommand(&mcmd);
                 last_auto_ctrl_tick = xTaskGetTickCount();
             }
@@ -447,9 +447,6 @@ static void Task_MotorControl(void *argument)
 
     (void)argument;
 
-    static int old_left = 0; ////////////////////////////////////////////////////////////////////////
-    static int old_right = 0; ///////////////////////////////////////////////////////////////////////
-
     for (;;)
     {
         if (xQueueReceive(qMotorCmd, &mcmd, portMAX_DELAY) == pdTRUE)
@@ -464,24 +461,7 @@ static void Task_MotorControl(void *argument)
         	}
         	else
         	{
-                // Évite de brownouter les moteurs avec des changements brusques de consigne.
-                /////////////////////////////////////////////////////////////////////////////////////////////////////////
-                if (mcmd.left_cmd - old_left >= 10 || old_left - mcmd.left_cmd >= 10) old_left += (mcmd.left_cmd - old_left) / 2;
-                else {
-                    old_left = mcmd.left_cmd;
-                }
-
-                if (mcmd.right_cmd - old_right >= 10 || old_right - mcmd.right_cmd >= 10)
-                    old_right += (mcmd.right_cmd - old_right) / 2;
-                else {
-                    old_right = mcmd.right_cmd;
-                }
-
-                if (mcmd.right_cmd == 0) old_right = 0;
-                if (mcmd.left_cmd == 0) old_left = 0;
-                VehicleMotors_SetLeftRight(old_left, old_right);
-                //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        	    //VehicleMotors_SetLeftRight(mcmd.left_cmd, mcmd.right_cmd);
+        	    VehicleMotors_SetLeftRight(mcmd.left_cmd, mcmd.right_cmd);
         	}
         }
     }
