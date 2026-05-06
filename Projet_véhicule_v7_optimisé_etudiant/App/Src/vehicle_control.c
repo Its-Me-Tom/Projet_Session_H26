@@ -78,7 +78,7 @@ static vehicle_control_ctx_t g_vc = {0};
  * PRIVATE DEFINES
  *===========================================================================*/
 
-#define LF_LOST_TIMEOUT_TICKS   500		//300 x 10 ms = 3000 ms = 3 s
+#define LF_LOST_TIMEOUT_TICKS   300		//300 x 10 ms = 3000 ms = 3 s
 
 /* ===== LINE FOLLOW TUNING ===== */
 #define LF_SPEED_CENTER            30
@@ -387,72 +387,37 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         }
         if (g_vc.line_lost_ticks < LF_LOST_TIMEOUT_TICKS)
         {
-			if (g_vc.last_seen_dir == LINE_STATE_LEFT)
-			{
-				mcmd->left_cmd = LF_SPEED_MIN;
-				mcmd->right_cmd = LF_SPEED_MAX;
-			}
-			if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
-			{
-				mcmd->left_cmd = LF_SPEED_MIN;
-				mcmd->right_cmd = LF_SPEED_MAX;
-			}
-		}
-        else
+        	/* Tourner dans la direction de la dernière ligne vue */
+        	if (g_vc.last_seen_dir == LINE_STATE_LEFT)
+        	{
+        		/* Dernière ligne vue à gauche → tourner à gauche */
+        		mcmd->left_cmd  = LF_SEARCH_LEFT_MOTOR;
+        	 	mcmd->right_cmd = LF_SEARCH_RIGHT_MOTOR;
+        	   	mcmd->coast = false;
+            }
+       	    else if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
+       	    {
+       	    	/* Dernière ligne vue à droite → tourner à droite */
+        	   	mcmd->left_cmd  = LF_SEARCH_RIGHT_MOTOR;
+        	   	mcmd->right_cmd = LF_SEARCH_LEFT_MOTOR;
+        	   	mcmd->coast = false;
+       	    }
+       	    else if (g_vc.last_seen_dir == LINE_STATE_CENTER)
+       	    {
+       	    	/* Dernière ligne vue au centre -> avancer droit */
+        	    mcmd->left_cmd  = LF_SPEED_CENTER;
+        	    mcmd->right_cmd = LF_SPEED_CENTER;
+        	    mcmd->coast = false;
+       	    }
+        }
+        else if (g_vc.line_lost_ticks >= LF_LOST_TIMEOUT_TICKS)
         {
         	MotorCommand_Clear(mcmd);
         }
     }
     else
     {
-        g_vc.line_lost_ticks = 0;
-    }
-
-
-
-    /* Vérifier si la ligne est détectée */
-    int error = g_vc.line_error_filt;
-
-        /* Si aucune ligne n'a jamais été vue → arrêter */
-        if (!g_vc.line_seen_once)
-        {
-            MotorCommand_Clear(mcmd);
-            return;
-        }
-
-        /* Si timeout dépassé → arrêter */
-        if (g_vc.line_lost_ticks > LF_LOST_TIMEOUT_TICKS)
-        {
-            MotorCommand_Clear(mcmd);
-            return;
-        }
-
-        /* Tourner dans la direction de la dernière ligne vue */
-        if (g_vc.last_seen_dir == LINE_STATE_LEFT)
-        {
-            /* Dernière ligne vue à gauche → tourner à gauche */
-            mcmd->left_cmd  = LF_SEARCH_LEFT_MOTOR;
-            mcmd->right_cmd = LF_SEARCH_RIGHT_MOTOR;
-            mcmd->coast = false;
-        }
-        else if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
-        {
-            /* Dernière ligne vue à droite → tourner à droite */
-            mcmd->left_cmd  = LF_SEARCH_RIGHT_MOTOR;
-            mcmd->right_cmd = LF_SEARCH_LEFT_MOTOR;
-            mcmd->coast = false;
-        }
-        else if (g_vc.last_seen_dir == LINE_STATE_CENTER)
-        {
-            /* Dernière ligne vue au centre -> avancer droit */
-            mcmd->left_cmd  = LF_SPEED_CENTER;
-            mcmd->right_cmd = LF_SPEED_CENTER;
-            mcmd->coast = false;
-        }
-    }
-    else
-    {
-        /* Ligne détectée → remettre line_lost_ticks à 0 */
+    	/* Ligne détectée → remettre line_lost_ticks à 0 */
         g_vc.line_lost_ticks = 0;
 
         /* Ligne détectée → calculer la correction PID */
@@ -498,6 +463,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
     mcmd->left_cmd = clamp100(mcmd->left_cmd);
     mcmd->right_cmd = clamp100(mcmd->right_cmd);
 }
+
 
 /*
  * OBSTACLE AVOID :
