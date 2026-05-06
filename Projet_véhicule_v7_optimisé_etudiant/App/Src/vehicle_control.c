@@ -437,34 +437,12 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         if (correction < -LF_CORR_MAX) correction = -LF_CORR_MAX;
 
         /* =========================
-         * PI → vitesse (utilise integrale EXISTANTE)
+         * vitesse (simple et stable)
          * ========================= */
 
         int abs_err = abs(error);
 
-        /* =========================
-         * intégrale vitesse (SEULEMENT en virage)
-         * ========================= */
-
-        if (abs_err > 2)   /* deadband anti-bruit */
-        {
-            g_vc.line_error_integral += abs_err;
-        }
-        else
-        {
-            /* relâchement réel en ligne droite */
-            if (g_vc.line_error_integral > LF_KI)
-                g_vc.line_error_integral -= LF_KI;
-            else
-                g_vc.line_error_integral = 0;
-        }
-
-        /* saturation */
-        if (g_vc.line_error_integral > LF_INTEGRAL_MAX)
-            g_vc.line_error_integral = LF_INTEGRAL_MAX;
-
-        /* vitesse */
-        int speed = LF_SPEED_CENTER - (g_vc.line_error_integral * LF_KI);
+        int speed = LF_SPEED_CENTER - (abs_err * 2);
 
         if (speed < LF_SPEED_MIN)
             speed = LF_SPEED_MIN;
