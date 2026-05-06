@@ -425,21 +425,43 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         int error = g_vc.line_error_filt;
 
         /* =========================
-         * PD → direction
+         * D → dérivée
          * ========================= */
-
         int d = error - g_vc.line_error_prev;
         g_vc.line_error_prev = error;
 
-        int correction = (error * LF_KP) + (d * LF_KD);
+        /* =========================
+         * I → intégrale (progressive)
+         * ========================= */
+        g_vc.line_error_integral += error;
+
+        /* anti-windup */
+        if (g_vc.line_error_integral > LF_INTEGRAL_MAX)
+            g_vc.line_error_integral = LF_INTEGRAL_MAX;
+        if (g_vc.line_error_integral < -LF_INTEGRAL_MAX)
+            g_vc.line_error_integral = -LF_INTEGRAL_MAX;
+
+        int i_term = 0;
+
+        /* intégrale active seulement en virage réel */
+        if (abs(error) > 3)
+        {
+            i_term = g_vc.line_error_integral / 50;
+        }
+
+        /* =========================
+         * PD + I → direction
+         * ========================= */
+        int correction = (error * LF_KP)
+                       + (d * LF_KD)
+                       + i_term;
 
         if (correction > LF_CORR_MAX) correction = LF_CORR_MAX;
         if (correction < -LF_CORR_MAX) correction = -LF_CORR_MAX;
 
         /* =========================
-         * vitesse (simple et stable)
+         * vitesse (inchangée)
          * ========================= */
-
         int abs_err = abs(error);
 
         int speed = LF_SPEED_CENTER - (abs_err * 2);
@@ -453,7 +475,6 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         /* =========================
          * mix différentiel
          * ========================= */
-
         mcmd->left_cmd  = speed - correction;
         mcmd->right_cmd = speed + correction;
 
