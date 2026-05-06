@@ -1,17 +1,27 @@
-# Build STM32
+# ==== Build STM32 ====
 Debug/
 Release/
 
-# Build files
+# ==== Fichiers compilés ====
 *.o
 *.su
 *.cyclo
 *.map
 *.list
+*.elf
+*.bin
+*.hex
 
-# Launch configs
+# ==== STM32CubeIDE ====
+.settings/
+.metadata/
+
+# ==== Logs / temp ====
+*.log
+
+# ==== Launch configs ====
 *.launch
 
-# OS
+# ==== OS ====
 .DS_Store
 Thumbs.db

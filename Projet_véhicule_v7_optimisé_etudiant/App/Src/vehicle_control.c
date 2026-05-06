@@ -104,13 +104,13 @@ static vehicle_control_ctx_t g_vc = {0};
 
 
 /* ===== OBSTACLE AVOID TUNING ===== */
-#define OA_SIDE_PIVOT_MM           200   /* IR latéraux: si 100..200 mm, on pivote franchement */
-#define OA_SIDE_WARN_MM            300   /* correction douce plus loin */
+#define OA_SIDE_PIVOT_MM           250   /* IR latéraux: si 100..200 mm, on pivote franchement */
+#define OA_SIDE_WARN_MM            350   /* correction douce plus loin */
 
 #define OA_CENTER_BACKUP_MM        220   /* si obstacle centre < 200 mm -> recule */
 #define OA_CENTER_TURN_OK_MM       300   /* pour pouvoir réavancer après pivot */
 
-#define OA_FORWARD_SPEED            24
+#define OA_FORWARD_SPEED            30   /* vitesse normale d'avance */
 #define OA_FORWARD_SLOW             12
 
 #define OA_PIVOT_FAST               80   /* pivot sur place */
@@ -532,25 +532,21 @@ static void BuildObstacleAvoidMotorCommand(motor_cmd_t *mcmd)
 
     mcmd->coast = false;
 
-    /* =========================
-       1. TRIGGER BACKUP
-       ========================= */
+    /* === CENTER SENSOR === */
+
     if (g_vc.prox.center_mm < OA_CENTER_BACKUP_MM) // <220 mm
     {
         is_backing_up = true;
         ready_to_turn = false;
     }
 
-    /* =========================
-       2. BACKUP PHASE
-       ========================= */
     if (is_backing_up)
     {
         mcmd->left_cmd  = OA_REVERSE_SPEED;
         mcmd->right_cmd = OA_REVERSE_SPEED;
 
         /* Dès qu'on sort de la zone critique */
-        if (g_vc.prox.center_mm > OA_CENTER_BACKUP_MM)
+        if (g_vc.prox.center_mm > OA_CENTER_BACKUP_MM) // >300 mm
         {
             is_backing_up = false;
             ready_to_turn = true;
@@ -559,9 +555,6 @@ static void BuildObstacleAvoidMotorCommand(motor_cmd_t *mcmd)
         return; // IMPORTANT : ignore tout le reste
     }
 
-    /* =========================
-       3. TURN PHASE (UNE FOIS)
-       ========================= */
     if (ready_to_turn)
     {
         if (g_vc.prox.left_mm < g_vc.prox.right_mm)
@@ -584,10 +577,6 @@ static void BuildObstacleAvoidMotorCommand(motor_cmd_t *mcmd)
         return; // IMPORTANT
     }
 
-    /* =========================
-       4. NORMAL NAVIGATION
-       ========================= */
-
     mcmd->left_cmd  = OA_FORWARD_SPEED;
     mcmd->right_cmd = OA_FORWARD_SPEED;
 
@@ -598,7 +587,8 @@ static void BuildObstacleAvoidMotorCommand(motor_cmd_t *mcmd)
         mcmd->right_cmd = OA_FORWARD_SLOW;
     }
 
-    /* ⚠️ Les côtés seulement si PAS en backup/turn */
+    /* === TURN === */
+
     if (g_vc.prox.left_mm < OA_SIDE_PIVOT_MM)
     {
         mcmd->left_cmd  =  OA_PIVOT_FAST;
