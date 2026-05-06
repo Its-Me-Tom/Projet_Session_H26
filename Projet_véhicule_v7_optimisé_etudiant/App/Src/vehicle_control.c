@@ -440,12 +440,22 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
          * PI → vitesse (utilise integrale EXISTANTE)
          * ========================= */
 
-        /* intégrale déjà dans struct */
         g_vc.line_error_integral += abs(error);
 
+        /* relâchement quand ligne stable */
+        if (abs(error) == 0)
+        {
+            if (g_vc.line_error_integral > LF_KI)
+                g_vc.line_error_integral -= LF_KI;
+            else
+                g_vc.line_error_integral = 0;
+        }
+
+        /* saturation */
         if (g_vc.line_error_integral > LF_INTEGRAL_MAX)
             g_vc.line_error_integral = LF_INTEGRAL_MAX;
 
+        /* vitesse */
         int speed = LF_SPEED_CENTER - (g_vc.line_error_integral * LF_KI);
 
         if (speed < LF_SPEED_MIN)
