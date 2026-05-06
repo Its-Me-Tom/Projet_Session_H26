@@ -420,51 +420,49 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
     }
     else
     {
-    	/* Ligne détectée → remettre line_lost_ticks à 0 */
         g_vc.line_lost_ticks = 0;
 
-        /* Ligne détectée → calculer la correction PID */
-
-        /* Calcul PID : P + I + D */
         int error = g_vc.line_error_filt;
-        
-        /* Terme proportionnel */
-        int p_term = error * LF_KP;
-        
-        /* Terme dérivé */
-        int d_term = (error - g_vc.line_error_prev) * LF_KD;
+
+        /* =========================
+         * PD → direction
+         * ========================= */
+
+        int d = error - g_vc.line_error_prev;
         g_vc.line_error_prev = error;
-        
-        /* Terme intégral (avec saturation) */
-        g_vc.line_error_integral += error;
-        if (g_vc.line_error_integral > LF_INTEGRAL_MAX)
-            g_vc.line_error_integral = LF_INTEGRAL_MAX;
-        if (g_vc.line_error_integral < -LF_INTEGRAL_MAX)
-            g_vc.line_error_integral = -LF_INTEGRAL_MAX;
-        
-        int i_term = g_vc.line_error_integral * LF_KI;
-        
-        /* Correction totale */
-        int correction = p_term + i_term + d_term;
-        
-        /* Limiter la correction */
+
+        int correction = (error * LF_KP) + (d * LF_KD);
+
         if (correction > LF_CORR_MAX) correction = LF_CORR_MAX;
         if (correction < -LF_CORR_MAX) correction = -LF_CORR_MAX;
-        
-        /* Appliquer la correction aux moteurs */
-        /* Erreur positive = ligne à gauche → tourner à droite */
-        /* Erreur négative = ligne à droite → tourner à gauche */
-        mcmd->left_cmd = LF_SPEED_CENTER - correction;
-        mcmd->right_cmd = LF_SPEED_CENTER + correction;
-        
-        /* Limiter la vitesse minimale */
-        if (mcmd->left_cmd < LF_SPEED_MIN) mcmd->left_cmd = LF_SPEED_MIN;
-        if (mcmd->right_cmd < LF_SPEED_MIN) mcmd->right_cmd = LF_SPEED_MIN;
-        
+
+        /* =========================
+         * PI → vitesse (utilise integrale EXISTANTE)
+         * ========================= */
+
+        /* intégrale déjà dans struct */
+        g_vc.line_error_integral += abs(error);
+
+        if (g_vc.line_error_integral > LF_INTEGRAL_MAX)
+            g_vc.line_error_integral = LF_INTEGRAL_MAX;
+
+        int speed = LF_SPEED_CENTER - (g_vc.line_error_integral * LF_KI);
+
+        if (speed < LF_SPEED_MIN)
+            speed = LF_SPEED_MIN;
+
+        if (speed > LF_SPEED_CENTER)
+            speed = LF_SPEED_CENTER;
+
+        /* =========================
+         * mix différentiel
+         * ========================= */
+
+        mcmd->left_cmd  = speed - correction;
+        mcmd->right_cmd = speed + correction;
+
         mcmd->coast = false;
     }
-    mcmd->left_cmd = clamp100(mcmd->left_cmd);
-    mcmd->right_cmd = clamp100(mcmd->right_cmd);
 }
 
 
