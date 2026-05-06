@@ -38,6 +38,8 @@
 #include <string.h>
 
 #include <stdlib.h>
+#include "FreeRTOS.h"
+#include "task.h"
 
 /*============================================================================
  * PRIVATE TYPES
@@ -385,7 +387,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         {
             MotorCommand_Clear(mcmd);
         }
-        if (g_vc.line_lost_ticks < LF_LOST_TIMEOUT_TICKS)
+        if (g_vc.line_lost_ticks < pdMS_TO_TICKS(LF_LOST_TIMEOUT_TICKS))
         {
         	/* Tourner dans la direction de la dernière ligne vue */
         	if (g_vc.last_seen_dir == LINE_STATE_LEFT)
@@ -410,7 +412,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         	    mcmd->coast = false;
        	    }
         }
-        else if (g_vc.line_lost_ticks >= LF_LOST_TIMEOUT_TICKS)
+        else if (g_vc.line_lost_ticks >= pdMS_TO_TICKS(LF_LOST_TIMEOUT_TICKS))
         {
         	MotorCommand_Clear(mcmd);
         }
