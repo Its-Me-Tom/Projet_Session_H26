@@ -80,7 +80,7 @@ static vehicle_control_ctx_t g_vc = {0};
  * PRIVATE DEFINES
  *===========================================================================*/
 
-#define LF_LOST_TIMEOUT_TICKS   3000		//300 x 10 ms = 3000 ms = 3 s
+#define LF_LOST_TIMEOUT_TICKS    3000		//300 x 10 ms = 3000 ms = 3 s
 
 /* ===== LINE FOLLOW TUNING ===== */
 #define LF_SPEED_CENTER            30
@@ -97,8 +97,8 @@ static vehicle_control_ctx_t g_vc = {0};
 
 #define LF_CORR_SLEW_MAX 			5
 
-#define LF_SEARCH_LEFT_MOTOR      -30
-#define LF_SEARCH_RIGHT_MOTOR      30
+#define LF_SEARCH_LEFT_MOTOR      -50
+#define LF_SEARCH_RIGHT_MOTOR      50
 
 #define SMALL_ERROR_THRESHOLD 5
 
@@ -382,40 +382,41 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
     {
         g_vc.line_lost_ticks++;
 
-        /* jamais vue → arrêt */
+        // CAS 1 : jamais vu de ligne → STOP
         if (!g_vc.line_seen_once)
         {
             MotorCommand_Clear(mcmd);
+            return;
         }
-        if (g_vc.line_lost_ticks < pdMS_TO_TICKS(LF_LOST_TIMEOUT_TICKS))
+
+        // CAS 3 : timeout → STOP
+        if (g_vc.line_lost_ticks >= LF_LOST_TIMEOUT_TICKS)
         {
-        	/* Tourner dans la direction de la dernière ligne vue */
-        	if (g_vc.last_seen_dir == LINE_STATE_LEFT)
-        	{
-        		/* Dernière ligne vue à gauche → tourner à gauche */
-        		mcmd->left_cmd  = LF_SEARCH_LEFT_MOTOR;
-        	 	mcmd->right_cmd = LF_SEARCH_RIGHT_MOTOR;
-        	   	mcmd->coast = false;
-            }
-       	    else if (g_vc.last_seen_dir == LINE_STATE_RIGHT)
-       	    {
-       	    	/* Dernière ligne vue à droite → tourner à droite */
-        	   	mcmd->left_cmd  = LF_SEARCH_RIGHT_MOTOR;
-        	   	mcmd->right_cmd = LF_SEARCH_LEFT_MOTOR;
-        	   	mcmd->coast = false;
-       	    }
-       	    else if (g_vc.last_seen_dir == LINE_STATE_CENTER)
-       	    {
-       	    	/* Dernière ligne vue au centre -> avancer droit */
-        	    mcmd->left_cmd  = LF_SPEED_CENTER;
-        	    mcmd->right_cmd = LF_SPEED_CENTER;
-        	    mcmd->coast = false;
-       	    }
+            MotorCommand_Clear(mcmd);
+            return;
         }
-        else if (g_vc.line_lost_ticks >= pdMS_TO_TICKS(LF_LOST_TIMEOUT_TICKS))
+
+        // CAS 2 : recherche directionnelle
+        switch (g_vc.last_seen_dir)
         {
-        	MotorCommand_Clear(mcmd);
+            case LINE_STATE_LEFT:
+                mcmd->left_cmd  = LF_SEARCH_LEFT_MOTOR;
+                mcmd->right_cmd = LF_SEARCH_RIGHT_MOTOR;
+                break;
+
+            case LINE_STATE_RIGHT:
+                mcmd->left_cmd  = LF_SEARCH_RIGHT_MOTOR;
+                mcmd->right_cmd = LF_SEARCH_LEFT_MOTOR;
+                break;
+
+            default:
+                mcmd->left_cmd  = LF_SPEED_CENTER;
+                mcmd->right_cmd = LF_SPEED_CENTER;
+                break;
         }
+
+        mcmd->coast = false;
+        return;
     }
     else
     {
@@ -423,7 +424,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
         g_vc.line_lost_ticks = 0;
 
         /* Ligne détectée → calculer la correction PID */
-        
+
         /* Calcul PID : P + I + D */
         int error = g_vc.line_error_filt;
         
