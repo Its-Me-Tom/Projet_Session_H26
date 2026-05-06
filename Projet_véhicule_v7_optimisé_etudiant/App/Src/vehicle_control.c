@@ -440,11 +440,19 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
          * PI → vitesse (utilise integrale EXISTANTE)
          * ========================= */
 
-        g_vc.line_error_integral += abs(error);
+        int abs_err = abs(error);
 
-        /* relâchement quand ligne stable */
-        if (abs(error) == 0)
+        /* =========================
+         * intégrale vitesse (SEULEMENT en virage)
+         * ========================= */
+
+        if (abs_err > 2)   /* deadband anti-bruit */
         {
+            g_vc.line_error_integral += abs_err;
+        }
+        else
+        {
+            /* relâchement réel en ligne droite */
             if (g_vc.line_error_integral > LF_KI)
                 g_vc.line_error_integral -= LF_KI;
             else
