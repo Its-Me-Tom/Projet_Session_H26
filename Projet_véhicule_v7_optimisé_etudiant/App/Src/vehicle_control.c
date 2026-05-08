@@ -464,7 +464,7 @@ static void BuildLineFollowMotorCommand(motor_cmd_t *mcmd)
          * ========================= */
         int abs_err = abs(error);
 
-        int speed = LF_SPEED_CENTER - (abs_err * 2);
+        int speed = LF_SPEED_CENTER - abs_err;
 
         if (speed < LF_SPEED_MIN)
             speed = LF_SPEED_MIN;
