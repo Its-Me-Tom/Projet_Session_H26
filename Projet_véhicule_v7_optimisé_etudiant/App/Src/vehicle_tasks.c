@@ -147,11 +147,12 @@ static line_state_t DecodeLineState(uint8_t raw)
         case 0b0100000:  g_line_error = -6;  return LINE_STATE_RIGHT;
         case 0b0110000:  g_line_error = -4;  return LINE_STATE_RIGHT;
         case 0b0010000:  g_line_error = -2;  return LINE_STATE_RIGHT;
-        case 0b0011000:  g_line_error = -1;  return LINE_STATE_RIGHT;
 
+        case 0b0011000:  g_line_error = -1;  return LINE_STATE_CENTER;
         case 0b0001000:  g_line_error = 0;   return LINE_STATE_CENTER;
+        case 0b0011100:	 g_line_error = 0;   return LINE_STATE_CENTER;
+        case 0b0001100:  g_line_error = 1;   return LINE_STATE_CENTER;
 
-        case 0b0001100:  g_line_error = 1;   return LINE_STATE_LEFT;
         case 0b0000100:  g_line_error = 2;   return LINE_STATE_LEFT;
         case 0b0000110:  g_line_error = 4;   return LINE_STATE_LEFT;
         case 0b0000010:  g_line_error = 6;   return LINE_STATE_LEFT;
