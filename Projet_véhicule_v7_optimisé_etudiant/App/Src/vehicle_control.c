@@ -83,7 +83,7 @@ static vehicle_control_ctx_t g_vc = {0};
 #define LF_LOST_TIMEOUT_TICKS     300		//300 x 10 ms = 3000 ms = 3 s
 
 /* ===== LINE FOLLOW TUNING ===== */
-#define LF_SPEED_CENTER            50
+#define LF_SPEED_CENTER            45
 #define LF_SPEED_MIN               10
 #define LF_SPEED_MAX			   100
 
@@ -95,7 +95,7 @@ static vehicle_control_ctx_t g_vc = {0};
 #define LF_SPEED_REDUCTION_STEP     1
 #define LF_INTEGRAL_MAX            40
 
-#define LF_CORR_SLEW_MAX 			5
+#define LF_CORR_SLEW_MAX 			10
 
 #define LF_SEARCH_LEFT_MOTOR      -50
 #define LF_SEARCH_RIGHT_MOTOR      50
